@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#141C22">
-<title>Coffee by the River — AeroPress Timer</title>
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FAF6F0">
+<title>AeroPress Recipes & Timer — Bo's Third Brew</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body { background: #141C22; font-family: 'Trebuchet MS', 'Lucida Grande', sans-serif; }
+  body { background: #FAF6F0; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; }
   input, textarea, select { font-family: inherit; outline: none; }
   button { font-family: inherit; outline: none; }
   ::-webkit-scrollbar { display: none; }
@@ -23,21 +23,51 @@
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
+// ─── Theme: Morning Light ──────────────────────────────────
 const C = {
-  bg: "#141C22", card: "#1E2E3A", accent: "#2E86C1", sky: "#50BAE6",
-  red: "#CC4435", gold: "#E8A835", sage: "#6DB86B", white: "#F5F0EA",
-  subtle: "#8E9EAA", cancel: "#B82828", border: "#2A3E4E",
+  bg: "#FAF6F0",
+  card: "#FFFFFF",
+  accent: "#2878A8",
+  terra: "#C45D3E",
+  gold: "#D4960A",
+  amber: "#E8A820",
+  teal: "#3A9DB8",
+  sage: "#5A9E58",
+  text: "#2C2016",
+  subtle: "#887868",
+  cancel: "#B83830",
+  border: "#E0D5C8",
+  inputBg: "#F5EFE6",
+  shadow: "0 2px 8px rgba(44,32,22,0.08)",
 };
 
-const df64Map = {
-  "Extra fine": "~10", "Very fine": "~15", "Very fine (espresso-like)": "~15",
-  "Fine": "~22", "Fine drip": "~24", "Fine-medium": "~28",
-  "Medium-fine": "~34", "Medium": "~40", "Medium-coarse": "~46",
-  "Coarse": "~52", "Slightly finer than filter": "~32",
+// ─── Grinder Database ──────────────────────────────────────
+const GRINDERS = {
+  none: { name: "Description only", short: "" },
+  df64: { name: "DF64", short: "DF64" },
+  comandante: { name: "Comandante C40", short: "C40" },
+  jxpro: { name: "1Zpresso JX-Pro", short: "JX" },
+  encore: { name: "Baratza Encore", short: "Encore" },
+  timemore: { name: "Timemore C2/C3", short: "TM" },
 };
-const getDf64 = (g) => df64Map[g] || "~35";
+
+const GRIND_MAP = {
+  df64: { "Extra fine": "~10", "Very fine": "~15", "Very fine (espresso-like)": "~15", "Fine": "~22", "Fine drip": "~24", "Fine-medium": "~28", "Medium-fine": "~34", "Medium": "~40", "Medium-coarse": "~46", "Coarse": "~52", "Slightly finer than filter": "~32" },
+  comandante: { "Extra fine": "~10", "Very fine": "~12", "Very fine (espresso-like)": "~12", "Fine": "~16", "Fine drip": "~18", "Fine-medium": "~20", "Medium-fine": "~24", "Medium": "~28", "Medium-coarse": "~32", "Coarse": "~36", "Slightly finer than filter": "~22" },
+  jxpro: { "Extra fine": "~10", "Very fine": "~13", "Very fine (espresso-like)": "~13", "Fine": "~18", "Fine drip": "~20", "Fine-medium": "~22", "Medium-fine": "~27", "Medium": "~32", "Medium-coarse": "~36", "Coarse": "~40", "Slightly finer than filter": "~25" },
+  encore: { "Extra fine": "~5", "Very fine": "~7", "Very fine (espresso-like)": "~7", "Fine": "~10", "Fine drip": "~12", "Fine-medium": "~14", "Medium-fine": "~18", "Medium": "~22", "Medium-coarse": "~26", "Coarse": "~30", "Slightly finer than filter": "~16" },
+  timemore: { "Extra fine": "~6", "Very fine": "~8", "Very fine (espresso-like)": "~8", "Fine": "~10", "Fine drip": "~12", "Fine-medium": "~14", "Medium-fine": "~18", "Medium": "~22", "Medium-coarse": "~24", "Coarse": "~28", "Slightly finer than filter": "~16" },
+};
+
+const getGrindNum = (grinder, grindDesc) => {
+  if (grinder === "none" || !GRIND_MAP[grinder]) return null;
+  return GRIND_MAP[grinder][grindDesc] || null;
+};
+
 const cToF = (c) => Math.round(c * 9 / 5 + 32);
+const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
+// ─── Recipe Data ───────────────────────────────────────────
 const RECIPES = [
   { id: "classic-01", name: "Alan Adler Original", credit: "Alan Adler (AeroPress inventor)", category: "Classic", coffeeG: 15, waterG: 220, tempC: 80, grind: "Fine drip", method: "Standard", totalTime: 60, steps: [{ action: "pour", text: "Add coffee and pour water", waterTo: 220, waterAdd: 220, duration: 10 },{ action: "stir", text: "Stir gently", duration: 10 },{ action: "press", text: "Press slowly and steadily", duration: 30 }] },
   { id: "classic-02", name: "Hoffmann Ultimate", credit: "James Hoffmann", category: "Classic", coffeeG: 11, waterG: 200, tempC: 100, grind: "Medium-fine", method: "Standard", totalTime: 155, steps: [{ action: "pour", text: "Pour all water in one go", waterTo: 200, waterAdd: 200, duration: 10 },{ action: "wait", text: "Wait — don't touch it", duration: 120 },{ action: "stir", text: "Swirl gently 3 times", duration: 5 },{ action: "press", text: "Press very gently, stop at hiss", duration: 20 }] },
@@ -54,30 +84,39 @@ const RECIPES = [
   { id: "classic-13", name: "Low Agitation Brew", credit: "AeroPrecipe community", category: "Classic", coffeeG: 16, waterG: 235, tempC: 88, grind: "Medium-coarse", method: "Standard", totalTime: 150, steps: [{ action: "pour", text: "Pour water slowly — no splash", waterTo: 235, waterAdd: 235, duration: 20 },{ action: "wait", text: "No stirring — just wait", duration: 100 },{ action: "press", text: "Press extremely slowly", duration: 30 }] },
   { id: "classic-14", name: "The Bold Dark", credit: "Community recipe", category: "Classic", coffeeG: 18, waterG: 200, tempC: 85, grind: "Fine", method: "Inverted", totalTime: 120, steps: [{ action: "pour", text: "Pour water", waterTo: 200, waterAdd: 200, duration: 10 },{ action: "stir", text: "Stir vigorously 15 times", duration: 15 },{ action: "wait", text: "Steep", duration: 60 },{ action: "stir", text: "Stir 5 more times", duration: 5 },{ action: "press", text: "Flip and press firmly", duration: 30 }] },
   { id: "classic-15", name: "Sweet & Clean", credit: "Community recipe", category: "Classic", coffeeG: 13, waterG: 210, tempC: 92, grind: "Medium-fine", method: "Standard", totalTime: 135, steps: [{ action: "pour", text: "Bloom pour", waterTo: 30, waterAdd: 30, duration: 10 },{ action: "wait", text: "Bloom", duration: 20 },{ action: "pour", text: "Pour remaining water gently", waterTo: 210, waterAdd: 180, duration: 15 },{ action: "stir", text: "Swirl once", duration: 5 },{ action: "wait", text: "Steep", duration: 55 },{ action: "press", text: "Press slow, stop before hiss", duration: 30 }] },
-  { id: "champ-01", name: "Stanica 2024 — 1st", credit: "George Stanica, Romania (WAC 2024)", category: "Championship", coffeeG: 18, waterG: 186, tempC: 96, grind: "Medium", method: "Inverted", totalTime: 135, steps: [{ action: "pour", text: "Pour hot water", waterTo: 150, waterAdd: 150, duration: 12 },{ action: "stir", text: "Stir firmly 20 times", duration: 13 },{ action: "wait", text: "Attach cap, press out air, wait", duration: 80 },{ action: "press", text: "Flip and press gently", duration: 20 },{ action: "pour", text: "Add room temp water to cup", waterTo: 186, waterAdd: 36, duration: 10 }] },
-  { id: "champ-02", name: "Nugraha 2024 — 2nd", credit: "Sophan Nugraha, Indonesia (WAC 2024)", category: "Championship", coffeeG: 18, waterG: 200, tempC: 93, grind: "Medium-fine", method: "Inverted", totalTime: 150, steps: [{ action: "pour", text: "Pour water", waterTo: 200, waterAdd: 200, duration: 15 },{ action: "stir", text: "Stir gently 10 times", duration: 15 },{ action: "wait", text: "Steep", duration: 90 },{ action: "press", text: "Flip and press slowly", duration: 30 }] },
-  { id: "champ-03", name: "Emi Fukahori 2018 — 1st", credit: "Emi Fukahori, Switzerland (WAC 2018)", category: "Championship", coffeeG: 16.5, waterG: 245, tempC: 84, grind: "Coarse", method: "Standard", totalTime: 75, steps: [{ action: "pour", text: "Pour all water quickly", waterTo: 245, waterAdd: 245, duration: 10 },{ action: "stir", text: "Stir back and forth 5 times", duration: 8 },{ action: "wait", text: "Steep", duration: 27 },{ action: "press", text: "Press gently for 30 seconds", duration: 30 }] },
-  { id: "champ-04", name: "Kucharczyk 2019 — 1st", credit: "Filip Kucharczyk, Poland (WAC 2019)", category: "Championship", coffeeG: 16.5, waterG: 230, tempC: 84, grind: "Medium", method: "Standard", totalTime: 90, steps: [{ action: "pour", text: "Pour water", waterTo: 230, waterAdd: 230, duration: 15 },{ action: "stir", text: "Stir 3 times", duration: 5 },{ action: "wait", text: "Insert plunger, steep", duration: 40 },{ action: "press", text: "Press gently", duration: 30 }] },
-  { id: "champ-05", name: "Miczka 2017 — 1st", credit: "Paulina Miczka, Poland (WAC 2017)", category: "Championship", coffeeG: 20, waterG: 220, tempC: 82, grind: "Fine-medium", method: "Standard", totalTime: 75, steps: [{ action: "pour", text: "Pour water quickly", waterTo: 220, waterAdd: 220, duration: 10 },{ action: "stir", text: "Stir 4 times clockwise, 4 counter", duration: 10 },{ action: "wait", text: "Insert plunger, wait", duration: 25 },{ action: "press", text: "Press steadily", duration: 30 }] },
-  { id: "champ-06", name: "Zahradnik 2015 — 1st", credit: "Lukas Zahradnik, Czech Republic (WAC 2015)", category: "Championship", coffeeG: 20, waterG: 230, tempC: 78, grind: "Fine", method: "Inverted", totalTime: 105, steps: [{ action: "pour", text: "Pour water", waterTo: 230, waterAdd: 230, duration: 10 },{ action: "stir", text: "Stir aggressively", duration: 15 },{ action: "wait", text: "Cap and steep", duration: 50 },{ action: "press", text: "Flip and press slowly", duration: 30 }] },
-  { id: "champ-07", name: "Sasaki 2014 — 1st", credit: "Shuichi Sasaki, Japan (WAC 2014)", category: "Championship", coffeeG: 16.5, waterG: 250, tempC: 78, grind: "Fine-medium", method: "Inverted", totalTime: 100, steps: [{ action: "pour", text: "Pour 40g to bloom", waterTo: 40, waterAdd: 40, duration: 10 },{ action: "stir", text: "Stir 5 times", duration: 5 },{ action: "pour", text: "Pour remaining water", waterTo: 250, waterAdd: 210, duration: 15 },{ action: "wait", text: "Wait", duration: 40 },{ action: "press", text: "Flip and press slowly", duration: 30 }] },
-  { id: "champ-08", name: "Verellen 2013 — 1st", credit: "Jeff Verellen, Belgium (WAC 2013)", category: "Championship", coffeeG: 17, waterG: 270, tempC: 80, grind: "Coarse", method: "Standard", totalTime: 110, steps: [{ action: "pour", text: "Wet grounds with small pour", waterTo: 40, waterAdd: 40, duration: 10 },{ action: "pour", text: "Slowly pour remaining", waterTo: 270, waterAdd: 230, duration: 30 },{ action: "wait", text: "Let steep and drip", duration: 50 },{ action: "press", text: "Gently press — stop before air", duration: 20 }] },
-  { id: "champ-09", name: "de Buysere 2012 — 1st", credit: "Charlene de Buysere, Belgium (WAC 2012)", category: "Championship", coffeeG: 17, waterG: 270, tempC: 80, grind: "Coarse", method: "Standard", totalTime: 90, steps: [{ action: "pour", text: "Pour water gently", waterTo: 270, waterAdd: 270, duration: 15 },{ action: "wait", text: "No stirring — steep", duration: 50 },{ action: "press", text: "Slow press, stop at hiss", duration: 20 }] },
-  { id: "champ-10", name: "Verellen 2011 — 1st", credit: "Jeff Verellen, Belgium (WAC 2011)", category: "Championship", coffeeG: 17, waterG: 270, tempC: 80, grind: "Coarse", method: "Standard", totalTime: 90, steps: [{ action: "pour", text: "Rinse filter, add coffee, pour water", waterTo: 270, waterAdd: 270, duration: 15 },{ action: "wait", text: "No stirring — let it steep", duration: 50 },{ action: "press", text: "Slow press, stop before air", duration: 20 }] },
-  { id: "champ-11", name: "Garay 2023 — 1st", credit: "Carolina Garay, Chile (WAC 2023)", category: "Championship", coffeeG: 16, waterG: 200, tempC: 90, grind: "Medium-fine", method: "Standard", totalTime: 120, steps: [{ action: "pour", text: "Pour water in circles", waterTo: 200, waterAdd: 200, duration: 15 },{ action: "stir", text: "Stir gently back and forth", duration: 10 },{ action: "wait", text: "Cap and steep", duration: 65 },{ action: "press", text: "Press gently", duration: 30 }] },
-  { id: "champ-12", name: "Hasager 2010 — 2nd", credit: "Jeppe Hasager, Denmark (WAC 2010)", category: "Championship", coffeeG: 20, waterG: 260, tempC: 80, grind: "Slightly finer than filter", method: "Inverted", totalTime: 80, steps: [{ action: "pour", text: "Pour water nearly to top", waterTo: 260, waterAdd: 260, duration: 10 },{ action: "stir", text: "Stir 10-12 seconds", duration: 12 },{ action: "wait", text: "Attach rinsed filter, brief rest", duration: 28 },{ action: "press", text: "Flip and press slowly, stop before air", duration: 30 }] },
+  { id: "champ-01", name: "Stanica 2024 — 1st", credit: "George Stanica, Romania (WAC 2024)", category: "Championship", year: 2024, coffeeG: 18, waterG: 186, tempC: 96, grind: "Medium", method: "Inverted", totalTime: 135, steps: [{ action: "pour", text: "Pour hot water", waterTo: 150, waterAdd: 150, duration: 12 },{ action: "stir", text: "Stir firmly 20 times", duration: 13 },{ action: "wait", text: "Attach cap, press out air, wait", duration: 80 },{ action: "press", text: "Flip and press gently", duration: 20 },{ action: "pour", text: "Add room temp water to cup", waterTo: 186, waterAdd: 36, duration: 10 }] },
+  { id: "champ-02", name: "Nugraha 2024 — 2nd", credit: "Sophan Nugraha, Indonesia (WAC 2024)", category: "Championship", year: 2024, coffeeG: 18, waterG: 200, tempC: 93, grind: "Medium-fine", method: "Inverted", totalTime: 150, steps: [{ action: "pour", text: "Pour water", waterTo: 200, waterAdd: 200, duration: 15 },{ action: "stir", text: "Stir gently 10 times", duration: 15 },{ action: "wait", text: "Steep", duration: 90 },{ action: "press", text: "Flip and press slowly", duration: 30 }] },
+  { id: "champ-03", name: "Emi Fukahori 2018 — 1st", credit: "Emi Fukahori, Switzerland (WAC 2018)", category: "Championship", year: 2018, coffeeG: 16.5, waterG: 245, tempC: 84, grind: "Coarse", method: "Standard", totalTime: 75, steps: [{ action: "pour", text: "Pour all water quickly", waterTo: 245, waterAdd: 245, duration: 10 },{ action: "stir", text: "Stir back and forth 5 times", duration: 8 },{ action: "wait", text: "Steep", duration: 27 },{ action: "press", text: "Press gently for 30 seconds", duration: 30 }] },
+  { id: "champ-04", name: "Kucharczyk 2019 — 1st", credit: "Filip Kucharczyk, Poland (WAC 2019)", category: "Championship", year: 2019, coffeeG: 16.5, waterG: 230, tempC: 84, grind: "Medium", method: "Standard", totalTime: 90, steps: [{ action: "pour", text: "Pour water", waterTo: 230, waterAdd: 230, duration: 15 },{ action: "stir", text: "Stir 3 times", duration: 5 },{ action: "wait", text: "Insert plunger, steep", duration: 40 },{ action: "press", text: "Press gently", duration: 30 }] },
+  { id: "champ-05", name: "Miczka 2017 — 1st", credit: "Paulina Miczka, Poland (WAC 2017)", category: "Championship", year: 2017, coffeeG: 20, waterG: 220, tempC: 82, grind: "Fine-medium", method: "Standard", totalTime: 75, steps: [{ action: "pour", text: "Pour water quickly", waterTo: 220, waterAdd: 220, duration: 10 },{ action: "stir", text: "Stir 4 times clockwise, 4 counter", duration: 10 },{ action: "wait", text: "Insert plunger, wait", duration: 25 },{ action: "press", text: "Press steadily", duration: 30 }] },
+  { id: "champ-06", name: "Zahradnik 2015 — 1st", credit: "Lukas Zahradnik, Czech Republic (WAC 2015)", category: "Championship", year: 2015, coffeeG: 20, waterG: 230, tempC: 78, grind: "Fine", method: "Inverted", totalTime: 105, steps: [{ action: "pour", text: "Pour water", waterTo: 230, waterAdd: 230, duration: 10 },{ action: "stir", text: "Stir aggressively", duration: 15 },{ action: "wait", text: "Cap and steep", duration: 50 },{ action: "press", text: "Flip and press slowly", duration: 30 }] },
+  { id: "champ-07", name: "Sasaki 2014 — 1st", credit: "Shuichi Sasaki, Japan (WAC 2014)", category: "Championship", year: 2014, coffeeG: 16.5, waterG: 250, tempC: 78, grind: "Fine-medium", method: "Inverted", totalTime: 100, steps: [{ action: "pour", text: "Pour 40g to bloom", waterTo: 40, waterAdd: 40, duration: 10 },{ action: "stir", text: "Stir 5 times", duration: 5 },{ action: "pour", text: "Pour remaining water", waterTo: 250, waterAdd: 210, duration: 15 },{ action: "wait", text: "Wait", duration: 40 },{ action: "press", text: "Flip and press slowly", duration: 30 }] },
+  { id: "champ-08", name: "Verellen 2013 — 1st", credit: "Jeff Verellen, Belgium (WAC 2013)", category: "Championship", year: 2013, coffeeG: 17, waterG: 270, tempC: 80, grind: "Coarse", method: "Standard", totalTime: 110, steps: [{ action: "pour", text: "Wet grounds with small pour", waterTo: 40, waterAdd: 40, duration: 10 },{ action: "pour", text: "Slowly pour remaining", waterTo: 270, waterAdd: 230, duration: 30 },{ action: "wait", text: "Let steep and drip", duration: 50 },{ action: "press", text: "Gently press — stop before air", duration: 20 }] },
+  { id: "champ-09", name: "de Buysere 2012 — 1st", credit: "Charlene de Buysere, Belgium (WAC 2012)", category: "Championship", year: 2012, coffeeG: 17, waterG: 270, tempC: 80, grind: "Coarse", method: "Standard", totalTime: 90, steps: [{ action: "pour", text: "Pour water gently", waterTo: 270, waterAdd: 270, duration: 15 },{ action: "wait", text: "No stirring — steep", duration: 50 },{ action: "press", text: "Slow press, stop at hiss", duration: 20 }] },
+  { id: "champ-10", name: "Verellen 2011 — 1st", credit: "Jeff Verellen, Belgium (WAC 2011)", category: "Championship", year: 2011, coffeeG: 17, waterG: 270, tempC: 80, grind: "Coarse", method: "Standard", totalTime: 90, steps: [{ action: "pour", text: "Rinse filter, add coffee, pour water", waterTo: 270, waterAdd: 270, duration: 15 },{ action: "wait", text: "No stirring — let it steep", duration: 50 },{ action: "press", text: "Slow press, stop before air", duration: 20 }] },
+  { id: "champ-11", name: "Garay 2023 — 1st", credit: "Carolina Garay, Chile (WAC 2023)", category: "Championship", year: 2023, coffeeG: 16, waterG: 200, tempC: 90, grind: "Medium-fine", method: "Standard", totalTime: 120, steps: [{ action: "pour", text: "Pour water in circles", waterTo: 200, waterAdd: 200, duration: 15 },{ action: "stir", text: "Stir gently back and forth", duration: 10 },{ action: "wait", text: "Cap and steep", duration: 65 },{ action: "press", text: "Press gently", duration: 30 }] },
+  { id: "champ-12", name: "Hasager 2010 — 2nd", credit: "Jeppe Hasager, Denmark (WAC 2010)", category: "Championship", year: 2010, coffeeG: 20, waterG: 260, tempC: 80, grind: "Slightly finer than filter", method: "Inverted", totalTime: 80, steps: [{ action: "pour", text: "Pour water nearly to top", waterTo: 260, waterAdd: 260, duration: 10 },{ action: "stir", text: "Stir 10-12 seconds", duration: 12 },{ action: "wait", text: "Attach rinsed filter, brief rest", duration: 28 },{ action: "press", text: "Flip and press slowly, stop before air", duration: 30 }] },
   { id: "espresso-01", name: "Hoffmann Espresso", credit: "James Hoffmann", category: "Espresso-style", coffeeG: 18, waterG: 56, tempC: 100, grind: "Very fine (espresso-like)", method: "Standard", totalTime: 85, steps: [{ action: "pour", text: "Pour all water onto grounds", waterTo: 56, waterAdd: 56, duration: 10 },{ action: "stir", text: "Stir vigorously to remove clumps", duration: 15 },{ action: "wait", text: "Wait for slurry to cool slightly", duration: 30 },{ action: "press", text: "Press firmly and evenly", duration: 30 }] },
   { id: "espresso-02", name: "Concentrated Press", credit: "Community recipe", category: "Espresso-style", coffeeG: 20, waterG: 60, tempC: 96, grind: "Very fine", method: "Inverted", totalTime: 90, steps: [{ action: "pour", text: "Pour water, ensuring all grounds wet", waterTo: 60, waterAdd: 60, duration: 10 },{ action: "stir", text: "Stir firmly 15 times", duration: 15 },{ action: "wait", text: "Steep", duration: 35 },{ action: "press", text: "Flip and press with firm pressure", duration: 30 }] },
   { id: "espresso-03", name: "The Faux-Spresso", credit: "AeroPrecipe community", category: "Espresso-style", coffeeG: 22, waterG: 70, tempC: 93, grind: "Extra fine", method: "Inverted", totalTime: 120, steps: [{ action: "pour", text: "Add water slowly", waterTo: 70, waterAdd: 70, duration: 10 },{ action: "stir", text: "Stir aggressively to form slurry", duration: 15 },{ action: "wait", text: "Steep under pressure", duration: 60 },{ action: "press", text: "Flip and press hard — expect resistance", duration: 35 }] },
 ];
 
-const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
-const actionColor = { pour: C.sky, stir: C.gold, wait: C.subtle, press: C.sage };
+const actionColor = { pour: C.teal, stir: C.amber, wait: C.subtle, press: C.sage };
 const actionIcon = { pour: "\u{1F4A7}", stir: "\u{1F504}", wait: "\u{231B}", press: "\u{2B07}\u{FE0F}" };
 
+// ─── Audio ─────────────────────────────────────────────────
+let audioCtx = null;
+const unlockAudio = () => {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const buf = audioCtx.createBuffer(1, 1, 22050);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf; src.connect(audioCtx.destination); src.start(0);
+  } catch (e) {}
+};
 const playChime = () => {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.connect(g); g.connect(ctx.destination); o.type = "sine";
     o.frequency.setValueAtTime(660, ctx.currentTime);
@@ -87,10 +126,9 @@ const playChime = () => {
     o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.4);
   } catch (e) {}
 };
-
 const playComplete = () => {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     [0, 0.15, 0.3].forEach((d, i) => {
       const o = ctx.createOscillator(), g = ctx.createGain();
       o.connect(g); g.connect(ctx.destination); o.type = "sine";
@@ -102,15 +140,14 @@ const playComplete = () => {
   } catch (e) {}
 };
 
-const loadData = () => {
-  try { const d = JSON.parse(localStorage.getItem("cbtr-data")); return d || { favorites: [], ratings: {}, notes: {}, customRecipes: [] }; }
-  catch { return { favorites: [], ratings: {}, notes: {}, customRecipes: [] }; }
-};
+// ─── Storage ───────────────────────────────────────────────
+const loadData = () => { try { return JSON.parse(localStorage.getItem("cbtr-data")) || { favorites: [], ratings: {}, notes: {}, customRecipes: [], grinder: "none" }; } catch { return { favorites: [], ratings: {}, notes: {}, customRecipes: [], grinder: "none" }; } };
 const saveData = (d) => localStorage.setItem("cbtr-data", JSON.stringify(d));
 
+// ─── Landscape SVG ─────────────────────────────────────────
 const Landscape = () => (
-  <svg viewBox="0 0 480 80" style={{ width: "100%", height: 70, display: "block" }} preserveAspectRatio="none">
-    <g stroke="#8B1A1A" strokeWidth="0.8" fill="none" opacity="0.4">
+  <svg viewBox="0 0 480 80" style={{ width: "100%", height: 65, display: "block" }} preserveAspectRatio="none">
+    <g stroke="#C4887A" strokeWidth="0.8" fill="none" opacity="0.45">
       <polygon points="0,48 30,18 60,48" /><polygon points="30,48 65,10 100,48" />
       <polygon points="80,48 120,5 160,48" /><polygon points="140,48 175,15 210,48" />
       <polygon points="190,48 230,8 270,48" /><polygon points="250,48 285,18 320,48" />
@@ -118,42 +155,37 @@ const Landscape = () => (
       <polygon points="420,48 455,20 480,48" />
       <line x1="65" y1="10" x2="65" y2="48" /><line x1="120" y1="5" x2="120" y2="48" />
       <line x1="230" y1="8" x2="230" y2="48" /><line x1="340" y1="3" x2="340" y2="48" />
-      <line x1="30" y1="18" x2="60" y2="48" /><line x1="30" y1="18" x2="0" y2="48" />
-      <line x1="175" y1="15" x2="140" y2="48" /><line x1="175" y1="15" x2="210" y2="48" />
-      <line x1="400" y1="14" x2="360" y2="48" /><line x1="400" y1="14" x2="440" y2="48" />
     </g>
-    <g stroke="#CC4435" strokeWidth="1" fill="none" opacity="0.5">
+    <g stroke="#C45D3E" strokeWidth="1" fill="none" opacity="0.5">
       <polygon points="20,48 55,22 90,48" /><polygon points="70,48 110,12 150,48" />
       <polygon points="130,48 170,20 210,48" /><polygon points="200,48 245,10 290,48" />
       <polygon points="270,48 310,16 350,48" /><polygon points="330,48 370,8 410,48" />
       <polygon points="390,48 430,22 470,48" />
-      <line x1="55" y1="22" x2="72" y2="48" /><line x1="110" y1="12" x2="130" y2="48" />
-      <line x1="245" y1="10" x2="245" y2="48" /><line x1="370" y1="8" x2="370" y2="48" />
-      <line x1="310" y1="16" x2="290" y2="48" /><line x1="310" y1="16" x2="330" y2="48" />
+      <line x1="110" y1="12" x2="130" y2="48" /><line x1="245" y1="10" x2="245" y2="48" /><line x1="370" y1="8" x2="370" y2="48" />
     </g>
-    <g stroke="#D4731C" strokeWidth="1.2" fill="none" opacity="0.55">
+    <g stroke="#A84828" strokeWidth="1.2" fill="none" opacity="0.55">
       <polygon points="10,48 50,28 90,48" /><polygon points="100,48 145,18 190,48" />
       <polygon points="180,48 225,24 270,48" /><polygon points="260,48 305,14 350,48" />
       <polygon points="340,48 385,26 430,48" /><polygon points="410,48 450,30 480,48" />
-      <line x1="50" y1="28" x2="50" y2="48" /><line x1="145" y1="18" x2="145" y2="48" />
-      <line x1="305" y1="14" x2="305" y2="48" /><line x1="385" y1="26" x2="385" y2="48" />
+      <line x1="50" y1="28" x2="50" y2="48" /><line x1="145" y1="18" x2="145" y2="48" /><line x1="305" y1="14" x2="305" y2="48" />
     </g>
-    <line x1="0" y1="48" x2="480" y2="48" stroke="#2E86C1" strokeWidth="0.5" opacity="0.4" />
-    <g stroke="#2E86C1" strokeWidth="0.9" fill="none" opacity="0.45">
+    <line x1="0" y1="48" x2="480" y2="48" stroke="#D4960A" strokeWidth="0.7" opacity="0.5" />
+    <g stroke="#2878A8" strokeWidth="0.9" fill="none" opacity="0.5">
       <path d="M0,56 Q12,50 24,56 Q36,50 48,56 Q60,50 72,56 Q84,50 96,56 Q108,50 120,56 Q132,50 144,56 Q156,50 168,56 Q180,50 192,56 Q204,50 216,56 Q228,50 240,56 Q252,50 264,56 Q276,50 288,56 Q300,50 312,56 Q324,50 336,56 Q348,50 360,56 Q372,50 384,56 Q396,50 408,56 Q420,50 432,56 Q444,50 456,56 Q468,50 480,56" />
     </g>
-    <g stroke="#50BAE6" strokeWidth="0.8" fill="none" opacity="0.35">
+    <g stroke="#3A9DB8" strokeWidth="0.8" fill="none" opacity="0.4">
       <path d="M-12,62 Q0,55 12,62 Q24,55 36,62 Q48,55 60,62 Q72,55 84,62 Q96,55 108,62 Q120,55 132,62 Q144,55 156,62 Q168,55 180,62 Q192,55 204,62 Q216,55 228,62 Q240,55 252,62 Q264,55 276,62 Q288,55 300,62 Q312,55 324,62 Q336,55 348,62 Q360,55 372,62 Q384,55 396,62 Q408,55 420,62 Q432,55 444,62 Q456,55 468,62 Q480,55 492,62" />
     </g>
-    <g stroke="#2E86C1" strokeWidth="0.7" fill="none" opacity="0.25">
+    <g stroke="#88C0D8" strokeWidth="0.7" fill="none" opacity="0.3">
       <path d="M6,68 Q18,62 30,68 Q42,62 54,68 Q66,62 78,68 Q90,62 102,68 Q114,62 126,68 Q138,62 150,68 Q162,62 174,68 Q186,62 198,68 Q210,62 222,68 Q234,62 246,68 Q258,62 270,68 Q282,62 294,68 Q306,62 318,68 Q330,62 342,68 Q354,62 366,68 Q378,62 390,68 Q402,62 414,68 Q426,62 438,68 Q450,62 462,68 Q474,62 486,68" />
     </g>
-    <g stroke="#50BAE6" strokeWidth="0.5" fill="none" opacity="0.18">
+    <g stroke="#B8D8E8" strokeWidth="0.5" fill="none" opacity="0.2">
       <path d="M0,74 Q15,67 30,74 Q45,67 60,74 Q75,67 90,74 Q105,67 120,74 Q135,67 150,74 Q165,67 180,74 Q195,67 210,74 Q225,67 240,74 Q255,67 270,74 Q285,67 300,74 Q315,67 330,74 Q345,67 360,74 Q375,67 390,74 Q405,67 420,74 Q435,67 450,74 Q465,67 480,74" />
     </g>
   </svg>
 );
 
+// ═══════════════════════════════════════════════════════════
 function App() {
   const [screen, setScreen] = useState("home");
   const [activeTab, setActiveTab] = useState("Classic");
@@ -162,6 +194,8 @@ function App() {
   const [showNotes, setShowNotes] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [showWelcome, setShowWelcome] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+  const [sortBy, setSortBy] = useState("default");
   const [brewStep, setBrewStep] = useState(0);
   const [stepTime, setStepTime] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -181,9 +215,20 @@ function App() {
 
   useEffect(() => { saveData(data); }, [data]);
 
+  const grinder = data.grinder || "none";
+  const setGrinder = (g) => setData((p) => ({ ...p, grinder: g }));
+
   const all = [...RECIPES, ...data.customRecipes.map((r) => ({ ...r, isCustom: true }))];
   const tabs = ["Classic", "Championship", "Favorites", "My Recipes", "Espresso-style"];
-  const filtered = activeTab === "Favorites" ? all.filter((r) => data.favorites.includes(r.id)) : activeTab === "My Recipes" ? data.customRecipes : all.filter((r) => r.category === activeTab);
+
+  let filtered = activeTab === "Favorites" ? all.filter((r) => data.favorites.includes(r.id)) : activeTab === "My Recipes" ? data.customRecipes : all.filter((r) => r.category === activeTab);
+
+  // Sorting
+  if (sortBy === "alpha") filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+  else if (sortBy === "time-short") filtered = [...filtered].sort((a, b) => a.totalTime - b.totalTime);
+  else if (sortBy === "time-long") filtered = [...filtered].sort((a, b) => b.totalTime - a.totalTime);
+  else if (sortBy === "rating") filtered = [...filtered].sort((a, b) => (data.ratings[b.id] || 0) - (data.ratings[a.id] || 0));
+  else if (sortBy === "year" && activeTab === "Championship") filtered = [...filtered].sort((a, b) => (b.year || 0) - (a.year || 0));
 
   const wakeLock = async () => { try { if ("wakeLock" in navigator) wakeRef.current = await navigator.wakeLock.request("screen"); } catch {} };
   const wakeRelease = () => { if (wakeRef.current) { wakeRef.current.release(); wakeRef.current = null; } };
@@ -205,68 +250,102 @@ function App() {
     return () => clearInterval(timerRef.current);
   }, [isBrewing, brewStep, recipe, silenced]);
 
-  const startBrew = () => { setBrewStep(0); setStepTime(recipe.steps[0].duration); setElapsed(0); setIsBrewing(true); setBrewDone(false); setDoneRating(data.ratings[recipe.id] || 0); setDoneNote(data.notes[recipe.id] || ""); setScreen("brew"); wakeLock(); };
+  const startBrew = () => { unlockAudio(); setBrewStep(0); setStepTime(recipe.steps[0].duration); setElapsed(0); setIsBrewing(true); setBrewDone(false); setDoneRating(data.ratings[recipe.id] || 0); setDoneNote(data.notes[recipe.id] || ""); setScreen("brew"); wakeLock(); };
   const cancelBrew = () => { clearInterval(timerRef.current); setIsBrewing(false); setBrewDone(false); wakeRelease(); setScreen("detail"); };
   const toggleFav = (id) => setData((p) => ({ ...p, favorites: p.favorites.includes(id) ? p.favorites.filter((f) => f !== id) : [...p.favorites, id] }));
   const rate = (id, r) => setData((p) => ({ ...p, ratings: { ...p.ratings, [id]: r } }));
   const saveNt = (id, n) => setData((p) => ({ ...p, notes: { ...p.notes, [id]: n } }));
   const saveDone = () => { if (doneRating > 0) rate(recipe.id, doneRating); if (doneNote.trim()) saveNt(recipe.id, doneNote); setScreen("detail"); setBrewDone(false); };
-
-  const exportD = () => { const b = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href = u; a.download = "coffee-by-the-river-backup.json"; a.click(); URL.revokeObjectURL(u); };
+  const exportD = () => { const b = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href = u; a.download = "aeropress-recipes-backup.json"; a.click(); URL.revokeObjectURL(u); };
   const importD = (e) => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => { try { const d = JSON.parse(ev.target.result); if (d.favorites && d.ratings) setData(d); } catch {} }; r.readAsText(f); };
-
-  const saveCustom = () => {
-    const r = { ...form, id: editId || `custom-${Date.now()}`, coffeeG: parseFloat(form.coffeeG) || 0, waterG: parseFloat(form.waterG) || 0, tempC: parseFloat(form.tempC) || 0, category: "My Recipes", credit: "My recipe", totalTime: form.steps.reduce((s, st) => s + (parseInt(st.duration) || 0), 0), steps: form.steps.map((s) => ({ ...s, duration: parseInt(s.duration) || 0, waterTo: s.waterTo ? parseFloat(s.waterTo) : undefined, waterAdd: s.waterAdd ? parseFloat(s.waterAdd) : undefined })) };
-    setData((p) => { const idx = p.customRecipes.findIndex((x) => x.id === r.id); const u = [...p.customRecipes]; if (idx >= 0) u[idx] = r; else u.push(r); return { ...p, customRecipes: u }; });
-    setBuilding(false); setEditId(null); setForm(emptyForm);
-  };
+  const saveCustom = () => { const r = { ...form, id: editId || `custom-${Date.now()}`, coffeeG: parseFloat(form.coffeeG) || 0, waterG: parseFloat(form.waterG) || 0, tempC: parseFloat(form.tempC) || 0, category: "My Recipes", credit: "My recipe", totalTime: form.steps.reduce((s, st) => s + (parseInt(st.duration) || 0), 0), steps: form.steps.map((s) => ({ ...s, duration: parseInt(s.duration) || 0, waterTo: s.waterTo ? parseFloat(s.waterTo) : undefined, waterAdd: s.waterAdd ? parseFloat(s.waterAdd) : undefined })) }; setData((p) => { const idx = p.customRecipes.findIndex((x) => x.id === r.id); const u = [...p.customRecipes]; if (idx >= 0) u[idx] = r; else u.push(r); return { ...p, customRecipes: u }; }); setBuilding(false); setEditId(null); setForm(emptyForm); };
   const deleteCustom = (id) => { setData((p) => ({ ...p, customRecipes: p.customRecipes.filter((r) => r.id !== id), favorites: p.favorites.filter((f) => f !== id) })); setScreen("home"); };
   const editCustom = (r) => { setEditId(r.id); setForm({ name: r.name, coffeeG: String(r.coffeeG), waterG: String(r.waterG), tempC: String(r.tempC), grind: r.grind, method: r.method, steps: r.steps.map((s) => ({ ...s, duration: String(s.duration), waterTo: s.waterTo ? String(s.waterTo) : "", waterAdd: s.waterAdd ? String(s.waterAdd) : "" })) }); setBuilding(true); };
   const addStep = () => { if (!sf.text || !sf.duration) return; setForm((p) => ({ ...p, steps: [...p.steps, { ...sf }] })); setSf(emptyStep); };
 
-  const catBorder = (cat) => cat === "Championship" ? C.red : cat === "Espresso-style" ? C.gold : C.accent;
+  const catBorder = (cat) => cat === "Championship" ? C.terra : cat === "Espresso-style" ? C.gold : C.accent;
+  const grindLabel = (g) => { const num = getGrindNum(grinder, g); return num ? `${g} (${GRINDERS[grinder].short}: ${num})` : g; };
+  const grindPill = (g) => { const num = getGrindNum(grinder, g); return num ? `${GRINDERS[grinder].short}: ${num}` : g; };
 
   const S = {
-    app: { background: C.bg, minHeight: "100vh", color: C.white, fontFamily: "'Trebuchet MS', 'Lucida Grande', sans-serif", maxWidth: 480, margin: "0 auto", paddingBottom: 30 },
-    input: { background: "#0D1318", border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px", color: C.white, fontSize: 14, width: "100%", boxSizing: "border-box" },
-    select: { background: "#0D1318", border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px", color: C.white, fontSize: 14, width: "100%", boxSizing: "border-box" },
+    app: { background: C.bg, minHeight: "100vh", color: C.text, fontFamily: "-apple-system, 'Segoe UI', Roboto, sans-serif", maxWidth: 480, margin: "0 auto", paddingBottom: 30 },
+    input: { background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px", color: C.text, fontSize: 14, width: "100%", boxSizing: "border-box" },
+    select: { background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px", color: C.text, fontSize: 14, width: "100%", boxSizing: "border-box" },
     label: { fontSize: 12, color: C.subtle, marginBottom: 4, display: "block" },
-    primaryBtn: { background: `linear-gradient(135deg, ${C.red}, ${C.accent})`, color: C.white, border: "none", borderRadius: 10, padding: "14px 0", fontSize: 16, fontWeight: 700, width: "100%", cursor: "pointer", marginTop: 12, letterSpacing: 0.5 },
-    cancelBtn: { background: C.cancel, color: C.white, border: "none", borderRadius: 10, padding: "12px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer" },
-    secBtn: { background: C.card, color: C.white, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
-    star: (on) => ({ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: on ? C.gold : C.border, padding: 0, lineHeight: 1 }),
+    primaryBtn: { background: `linear-gradient(135deg, ${C.terra}, ${C.accent})`, color: "#fff", border: "none", borderRadius: 10, padding: "16px 0", fontSize: 18, fontWeight: 700, width: "100%", cursor: "pointer", marginTop: 12, letterSpacing: 0.5 },
+    cancelBtn: { background: C.cancel, color: "#fff", border: "none", borderRadius: 10, padding: "12px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer" },
+    secBtn: { background: C.card, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: C.shadow },
+    star: (on) => ({ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: on ? C.amber : C.border, padding: 0, lineHeight: 1 }),
   };
 
   const Welcome = () => (
     <div style={{ padding: "0 16px 6px" }}>
-      <div style={{ background: `linear-gradient(145deg, ${C.card}, #162430)`, borderRadius: 14, padding: "18px 16px", border: `1px solid ${C.border}` }}>
-        <p style={{ color: C.white, fontSize: 14, lineHeight: 1.7, margin: 0 }}>A step-by-step AeroPress brew timer with 30 curated recipes from world champions, renowned baristas, and the coffee community. Pick a recipe, follow the guided timer, and brew a better cup.</p>
-        <div style={{ width: 40, height: 2, background: C.accent, margin: "12px 0", borderRadius: 1 }} />
+      <div style={{ background: C.card, borderRadius: 14, padding: "18px 16px", border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
+        <p style={{ color: C.text, fontSize: 14, lineHeight: 1.7, margin: 0 }}>A step-by-step AeroPress brew timer with 30 curated recipes from world champions, renowned baristas, and the coffee community. Pick a recipe, follow the guided timer, and brew a better cup.</p>
+        <div style={{ width: 40, height: 2, background: C.terra, margin: "12px 0", borderRadius: 1 }} />
         <p style={{ color: C.subtle, fontSize: 13, lineHeight: 1.7, margin: 0 }}>This app was designed through conversation and collaboration between Tochina and Claude AI. About two hours of back-and-forth discussion shaped every detail — the concept, features, user flow, color palette, and design — before a single line of code was written. Proof that thoughtful conversation can be a powerful development tool.</p>
-        <button onClick={() => setShowWelcome(false)} style={{ background: "none", border: "none", color: C.sky, fontSize: 13, cursor: "pointer", padding: "8px 0 0", fontWeight: 600 }}>Dismiss</button>
+        <button onClick={() => setShowWelcome(false)} style={{ background: "none", border: "none", color: C.accent, fontSize: 13, cursor: "pointer", padding: "8px 0 0", fontWeight: 600 }}>Dismiss</button>
       </div>
     </div>
   );
 
+  const Settings = () => (
+    <div style={{ padding: "0 16px 10px" }}>
+      <div style={{ background: C.card, borderRadius: 14, padding: "16px", border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <h3 style={{ margin: 0, fontSize: 15, color: C.text }}>Grinder</h3>
+          <button onClick={() => setShowSettings(false)} style={{ background: "none", border: "none", color: C.subtle, cursor: "pointer", fontSize: 18 }}>✕</button>
+        </div>
+        <p style={{ fontSize: 12, color: C.subtle, margin: "0 0 10px" }}>Select your grinder to see approximate setting numbers with each recipe. Numbers are starting points — adjust to taste.</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {Object.entries(GRINDERS).map(([key, val]) => (
+            <button key={key} onClick={() => setGrinder(key)}
+              style={{ background: grinder === key ? C.accent : C.inputBg, color: grinder === key ? "#fff" : C.text, border: `1px solid ${grinder === key ? C.accent : C.border}`, borderRadius: 8, padding: "10px 12px", fontSize: 14, cursor: "pointer", textAlign: "left", fontWeight: grinder === key ? 600 : 400 }}>
+              {val.name}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // ═══ HOME ════════════════════════════════════════════
   if (screen === "home") {
     return (
       <div style={S.app}>
         <div style={{ textAlign: "center", padding: "20px 16px 2px" }}>
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
-            <h1 style={{ fontSize: 26, fontWeight: 800, color: C.accent, letterSpacing: 0.5, margin: 0 }}>Coffee by the River</h1>
-            <button onClick={() => setShowWelcome(true)} style={{ background: "none", border: "none", color: C.subtle, fontSize: 12, cursor: "pointer", padding: "2px 6px", opacity: 0.7 }} title="About">About</button>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: C.accent, letterSpacing: 0.3, margin: 0 }}>AeroPress Recipes & Timer</h1>
+          <p style={{ fontSize: 12, color: C.terra, margin: "3px 0 0", letterSpacing: 1.5, fontStyle: "italic" }}>Bo's Third Brew</p>
+          <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 6 }}>
+            <button onClick={() => setShowWelcome(true)} style={{ background: "none", border: "none", color: C.subtle, fontSize: 12, cursor: "pointer", opacity: 0.7 }}>About</button>
+            <button onClick={() => setShowSettings(!showSettings)} style={{ background: "none", border: "none", color: C.subtle, fontSize: 12, cursor: "pointer", opacity: 0.7 }}>⚙ Grinder</button>
           </div>
-          <p style={{ fontSize: 11, color: C.red, margin: "4px 0 0", letterSpacing: 3, textTransform: "uppercase", fontStyle: "italic" }}>AeroPress Timer</p>
         </div>
         <Landscape />
         {showWelcome && <Welcome />}
+        {showSettings && <Settings />}
         <div style={{ display: "flex", overflowX: "auto", borderBottom: `1px solid ${C.border}`, scrollbarWidth: "none" }}>
           {tabs.map((t) => (
-            <button key={t} onClick={() => { setActiveTab(t); setBuilding(false); }} style={{ padding: "10px 13px", fontSize: 12, fontWeight: activeTab === t ? 700 : 400, color: activeTab === t ? C.accent : C.subtle, borderBottom: activeTab === t ? `2px solid ${C.accent}` : "2px solid transparent", background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+            <button key={t} onClick={() => { setActiveTab(t); setBuilding(false); setSortBy("default"); }}
+              style={{ padding: "10px 13px", fontSize: 12, fontWeight: activeTab === t ? 700 : 400, color: activeTab === t ? C.accent : C.subtle, borderBottom: activeTab === t ? `2px solid ${C.accent}` : "2px solid transparent", background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
               {t === "Favorites" ? "\u2605 " + t : t}
             </button>
           ))}
         </div>
+        {/* Sort bar */}
+        {!building && filtered.length > 1 && (
+          <div style={{ padding: "8px 14px 0", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 12, color: C.subtle }}>Sort:</span>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={{ ...S.select, width: "auto", padding: "5px 10px", fontSize: 12 }}>
+              <option value="default">Default</option>
+              <option value="alpha">A → Z</option>
+              <option value="time-short">Shortest first</option>
+              <option value="time-long">Longest first</option>
+              <option value="rating">Highest rated</option>
+              {activeTab === "Championship" && <option value="year">Newest first</option>}
+            </select>
+          </div>
+        )}
         {activeTab === "My Recipes" && !building && <div style={{ padding: "12px 14px 0" }}><button style={{ ...S.primaryBtn, marginTop: 0 }} onClick={() => { setForm(emptyForm); setBuilding(true); setEditId(null); }}>+ New Recipe</button></div>}
         {activeTab === "My Recipes" && building && (
           <div style={{ padding: 14 }}>
@@ -277,51 +356,43 @@ function App() {
                 <div><label style={S.label}>Coffee (g)</label><input style={S.input} type="number" value={form.coffeeG} onChange={(e) => setForm((p) => ({ ...p, coffeeG: e.target.value }))} /></div>
                 <div><label style={S.label}>Water (g)</label><input style={S.input} type="number" value={form.waterG} onChange={(e) => setForm((p) => ({ ...p, waterG: e.target.value }))} /></div>
                 <div><label style={S.label}>Temp (°F)</label><input style={S.input} type="number" value={form.tempC} onChange={(e) => setForm((p) => ({ ...p, tempC: e.target.value }))} /></div>
-                <div><label style={S.label}>DF64 Grind #</label><input style={S.input} value={form.grind} onChange={(e) => setForm((p) => ({ ...p, grind: e.target.value }))} /></div>
+                <div><label style={S.label}>Grind</label><input style={S.input} value={form.grind} onChange={(e) => setForm((p) => ({ ...p, grind: e.target.value }))} /></div>
               </div>
               <div><label style={S.label}>Method</label><select style={S.select} value={form.method} onChange={(e) => setForm((p) => ({ ...p, method: e.target.value }))}><option>Standard</option><option>Inverted</option></select></div>
-              <h4 style={{ color: C.white, margin: "8px 0 4px", fontSize: 14 }}>Steps</h4>
+              <h4 style={{ color: C.text, margin: "8px 0 4px", fontSize: 14 }}>Steps</h4>
               {form.steps.map((s, i) => (
-                <div key={i} style={{ background: "#0D1318", padding: "8px 12px", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div key={i} style={{ background: C.inputBg, padding: "8px 12px", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 13 }}><span style={{ color: actionColor[s.action] }}>{actionIcon[s.action]}</span> {s.text} ({s.duration}s){s.waterTo && <span style={{ color: C.subtle }}> — {s.waterTo}g (+{s.waterAdd}g)</span>}</span>
                   <button onClick={() => setForm((p) => ({ ...p, steps: p.steps.filter((_, j) => j !== i) }))} style={{ background: "none", border: "none", color: C.cancel, cursor: "pointer", fontSize: 16 }}>✕</button>
                 </div>
               ))}
-              <div style={{ background: C.card, padding: 12, borderRadius: 8 }}>
+              <div style={{ background: C.inputBg, padding: 12, borderRadius: 8, border: `1px solid ${C.border}` }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                   <div><label style={S.label}>Action</label><select style={S.select} value={sf.action} onChange={(e) => setSf((p) => ({ ...p, action: e.target.value }))}><option value="pour">Pour</option><option value="stir">Stir</option><option value="wait">Wait</option><option value="press">Press</option></select></div>
                   <div><label style={S.label}>Duration (sec)</label><input style={S.input} type="number" value={sf.duration} onChange={(e) => setSf((p) => ({ ...p, duration: e.target.value }))} /></div>
                 </div>
                 <div style={{ marginBottom: 8 }}><label style={S.label}>Instruction</label><input style={S.input} placeholder="Describe this step" value={sf.text} onChange={(e) => setSf((p) => ({ ...p, text: e.target.value }))} /></div>
-                {sf.action === "pour" && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                    <div><label style={S.label}>Total weight (g)</label><input style={S.input} type="number" value={sf.waterTo} onChange={(e) => setSf((p) => ({ ...p, waterTo: e.target.value }))} /></div>
-                    <div><label style={S.label}>Added (g)</label><input style={S.input} type="number" value={sf.waterAdd} onChange={(e) => setSf((p) => ({ ...p, waterAdd: e.target.value }))} /></div>
-                  </div>
-                )}
+                {sf.action === "pour" && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}><div><label style={S.label}>Total weight (g)</label><input style={S.input} type="number" value={sf.waterTo} onChange={(e) => setSf((p) => ({ ...p, waterTo: e.target.value }))} /></div><div><label style={S.label}>Added (g)</label><input style={S.input} type="number" value={sf.waterAdd} onChange={(e) => setSf((p) => ({ ...p, waterAdd: e.target.value }))} /></div></div>}
                 <button style={{ ...S.secBtn, width: "100%" }} onClick={addStep}>+ Add Step</button>
               </div>
-              <div style={{ display: "flex", gap: 10 }}>
-                <button style={{ ...S.primaryBtn, flex: 1 }} onClick={saveCustom} disabled={!form.name || form.steps.length === 0}>{editId ? "Save Changes" : "Save Recipe"}</button>
-                <button style={{ ...S.cancelBtn, marginTop: 12 }} onClick={() => { setBuilding(false); setEditId(null); setForm(emptyForm); }}>Cancel</button>
-              </div>
+              <div style={{ display: "flex", gap: 10 }}><button style={{ ...S.primaryBtn, flex: 1 }} onClick={saveCustom} disabled={!form.name || form.steps.length === 0}>{editId ? "Save Changes" : "Save Recipe"}</button><button style={{ ...S.cancelBtn, marginTop: 12 }} onClick={() => { setBuilding(false); setEditId(null); setForm(emptyForm); }}>Cancel</button></div>
             </div>
           </div>
         )}
         {!building && filtered.length === 0 && <div style={{ textAlign: "center", padding: 40, color: C.subtle }}>{activeTab === "Favorites" ? "No favorites yet — star a recipe to see it here" : activeTab === "My Recipes" ? "No custom recipes yet" : "No recipes"}</div>}
         {!building && filtered.map((r) => (
-          <div key={r.id} style={{ background: C.card, margin: "10px 14px", borderRadius: 12, padding: "14px 16px", cursor: "pointer", borderLeft: `3px solid ${catBorder(r.category)}` }}
+          <div key={r.id} style={{ background: C.card, margin: "10px 14px", borderRadius: 12, padding: "14px 16px", cursor: "pointer", borderLeft: `3px solid ${catBorder(r.category)}`, boxShadow: C.shadow }}
             onClick={() => { setRecipe(r); setScreen("detail"); setShowNotes(false); setNoteText(data.notes[r.id] || ""); }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ flex: 1 }}><p style={{ fontSize: 16, fontWeight: 600, color: C.white, margin: 0 }}>{r.name}</p><p style={{ fontSize: 12, color: C.subtle, margin: "2px 0 0" }}>{r.credit}</p></div>
+              <div style={{ flex: 1 }}><p style={{ fontSize: 16, fontWeight: 600, color: C.text, margin: 0 }}>{r.name}</p><p style={{ fontSize: 12, color: C.subtle, margin: "2px 0 0" }}>{r.credit}</p></div>
               <button style={S.star(data.favorites.includes(r.id))} onClick={(e) => { e.stopPropagation(); toggleFav(r.id); }}>★</button>
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
-              {[`${r.coffeeG}g`, `${r.waterG}g`, `${cToF(r.tempC)}°F`, r.method, fmt(r.totalTime)].map((v, i) => (
-                <span key={i} style={{ background: C.bg, padding: "3px 8px", borderRadius: 6, fontSize: 11, color: C.sky }}>{v}</span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 10 }}>
+              {[`${r.coffeeG}g`, `${r.waterG}g`, `${cToF(r.tempC)}°F`, grindPill(r.grind), r.method, fmt(r.totalTime)].map((v, i) => (
+                <span key={i} style={{ background: C.inputBg, padding: "3px 7px", borderRadius: 6, fontSize: 11, color: C.accent, border: `1px solid ${C.border}` }}>{v}</span>
               ))}
             </div>
-            {data.ratings[r.id] > 0 && <div style={{ marginTop: 6 }}>{[1, 2, 3, 4, 5].map((s) => <span key={s} style={{ color: s <= data.ratings[r.id] ? C.gold : C.border, fontSize: 14 }}>★</span>)}</div>}
+            {data.ratings[r.id] > 0 && <div style={{ marginTop: 6 }}>{[1, 2, 3, 4, 5].map((s) => <span key={s} style={{ color: s <= data.ratings[r.id] ? C.amber : C.border, fontSize: 14 }}>★</span>)}</div>}
           </div>
         ))}
         {!building && <div style={{ padding: "24px 14px", display: "flex", gap: 10, justifyContent: "center" }}>
@@ -332,35 +403,40 @@ function App() {
     );
   }
 
+  // ═══ DETAIL ══════════════════════════════════════════
   if (screen === "detail" && recipe) {
     return (
       <div style={S.app}>
         <div style={{ padding: 14 }}>
           <button onClick={() => setScreen("home")} style={{ background: "none", border: "none", color: C.accent, fontSize: 14, cursor: "pointer", padding: 0, marginBottom: 12 }}>← Back</button>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-            <h2 style={{ color: C.white, margin: 0, fontSize: 22, fontWeight: 700, flex: 1 }}>{recipe.name}</h2>
+            <h2 style={{ color: C.text, margin: 0, fontSize: 22, fontWeight: 700, flex: 1 }}>{recipe.name}</h2>
             <button style={S.star(data.favorites.includes(recipe.id))} onClick={() => toggleFav(recipe.id)}>★</button>
           </div>
           <p style={{ color: C.subtle, fontSize: 13, margin: "2px 0 16px" }}>{recipe.credit}</p>
-          <div style={{ background: C.card, borderRadius: 14, padding: 16, marginBottom: 16, borderTop: `3px solid ${C.accent}` }}>
+          <div style={{ background: C.card, borderRadius: 14, padding: 16, marginBottom: 16, borderTop: `3px solid ${C.accent}`, boxShadow: C.shadow }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
-              {[{ l: "Coffee", v: `${recipe.coffeeG}g` }, { l: "Water", v: `${recipe.waterG}g` }, { l: "Temp", v: `${cToF(recipe.tempC)}°F` }, { l: "Grind", v: recipe.grind }, { l: "DF64", v: getDf64(recipe.grind) }, { l: "Method", v: recipe.method }, { l: "Time", v: fmt(recipe.totalTime) }].map((x, i) => (
-                <div key={i}><div style={{ fontSize: 11, color: C.subtle, marginBottom: 2 }}>{x.l}</div><div style={{ fontSize: 14, fontWeight: 600, color: C.sky }}>{x.v}</div></div>
+              {[
+                { l: "Coffee", v: `${recipe.coffeeG}g` }, { l: "Water", v: `${recipe.waterG}g` },
+                { l: "Temp", v: `${cToF(recipe.tempC)}°F` }, { l: "Grind", v: grindLabel(recipe.grind) },
+                { l: "Method", v: recipe.method }, { l: "Time", v: fmt(recipe.totalTime) },
+              ].map((x, i) => (
+                <div key={i}><div style={{ fontSize: 11, color: C.subtle, marginBottom: 2 }}>{x.l}</div><div style={{ fontSize: 14, fontWeight: 600, color: C.accent }}>{x.v}</div></div>
               ))}
             </div>
           </div>
           <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 12, color: C.subtle }}>My Rating:</span>
             <div>{[1, 2, 3, 4, 5].map((s) => <button key={s} style={S.star(s <= (data.ratings[recipe.id] || 0))} onClick={() => rate(recipe.id, s)}>★</button>)}</div>
-            <button onClick={() => setShowNotes(!showNotes)} style={{ background: "none", border: "none", color: C.subtle, fontSize: 18, cursor: "pointer", marginLeft: "auto" }} title="Notes">📝</button>
+            <button onClick={() => setShowNotes(!showNotes)} style={{ background: "none", border: "none", color: C.subtle, fontSize: 20, cursor: "pointer", marginLeft: "auto" }} title="Notes">📝</button>
           </div>
           {showNotes && <div style={{ marginBottom: 16 }}><textarea style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="Add personal notes..." value={noteText} onChange={(e) => setNoteText(e.target.value)} /><button style={{ ...S.secBtn, marginTop: 6, fontSize: 12 }} onClick={() => { saveNt(recipe.id, noteText); setShowNotes(false); }}>Save Note</button></div>}
-          <h3 style={{ color: C.white, fontSize: 14, margin: "0 0 10px", fontWeight: 600 }}>Steps Preview</h3>
+          <h3 style={{ color: C.text, fontSize: 14, margin: "0 0 10px", fontWeight: 600 }}>Steps Preview</h3>
           {recipe.steps.map((step, i) => (
             <div key={i} style={{ display: "flex", gap: 10, marginBottom: 10, alignItems: "flex-start" }}>
-              <div style={{ width: 30, height: 30, borderRadius: "50%", background: actionColor[step.action], display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0, color: "#fff" }}>{i + 1}</div>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: actionColor[step.action], display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, flexShrink: 0, color: "#fff" }}>{i + 1}</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, color: C.white }}>{step.text}{step.waterTo != null && <span style={{ color: C.sky, fontWeight: 600 }}> — Pour to {step.waterTo}g (+{step.waterAdd}g)</span>}</div>
+                <div style={{ fontSize: 15, color: C.text, lineHeight: 1.4 }}>{step.text}{step.waterTo != null && <span style={{ color: C.teal, fontWeight: 600 }}> — Pour to {step.waterTo}g (+{step.waterAdd}g)</span>}</div>
                 <div style={{ fontSize: 12, color: C.subtle }}>{fmt(step.duration)}</div>
               </div>
             </div>
@@ -372,17 +448,18 @@ function App() {
     );
   }
 
+  // ═══ BREW ════════════════════════════════════════════
   if (screen === "brew" && recipe) {
     const cs = recipe.steps[brewStep];
     if (brewDone) {
       return (
         <div style={S.app}>
           <div style={{ padding: "50px 20px", textAlign: "center" }}>
-            <div style={{ fontSize: 52, marginBottom: 12 }}>☕</div>
-            <h2 style={{ color: C.sage, fontSize: 28, margin: "0 0 6px", fontWeight: 800 }}>Brew Complete</h2>
-            <p style={{ color: C.subtle, fontSize: 14, margin: "0 0 30px" }}>{recipe.name} — {fmt(elapsed)}</p>
-            <p style={{ color: C.white, fontSize: 14, marginBottom: 10 }}>How was it?</p>
-            <div style={{ marginBottom: 24 }}>{[1, 2, 3, 4, 5].map((s) => <button key={s} style={{ ...S.star(s <= doneRating), fontSize: 34, margin: "0 5px" }} onClick={() => setDoneRating(s)}>★</button>)}</div>
+            <div style={{ fontSize: 56, marginBottom: 12 }}>☕</div>
+            <h2 style={{ color: C.sage, fontSize: 30, margin: "0 0 6px", fontWeight: 800 }}>Brew Complete</h2>
+            <p style={{ color: C.subtle, fontSize: 15, margin: "0 0 30px" }}>{recipe.name} — {fmt(elapsed)}</p>
+            <p style={{ color: C.text, fontSize: 16, marginBottom: 10 }}>How was it?</p>
+            <div style={{ marginBottom: 24 }}>{[1, 2, 3, 4, 5].map((s) => <button key={s} style={{ ...S.star(s <= doneRating), fontSize: 36, margin: "0 5px" }} onClick={() => setDoneRating(s)}>★</button>)}</div>
             <textarea style={{ ...S.input, minHeight: 60, resize: "vertical", marginBottom: 16 }} placeholder="Tasting notes, thoughts..." value={doneNote} onChange={(e) => setDoneNote(e.target.value)} />
             <button style={S.primaryBtn} onClick={saveDone}>Save & Done</button>
             <button style={{ ...S.secBtn, width: "100%", marginTop: 10 }} onClick={() => { setScreen("detail"); setBrewDone(false); }}>Skip</button>
@@ -394,24 +471,24 @@ function App() {
     return (
       <div style={S.app}>
         <div style={{ padding: "14px 16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ fontSize: 12, color: C.subtle }}>Total: <span style={{ color: C.white, fontWeight: 700 }}>{fmt(elapsed)}</span></div>
-          <div style={{ fontSize: 12, color: C.subtle }}>Step {brewStep + 1} / {recipe.steps.length}</div>
-          <button onClick={() => setSilenced(!silenced)} style={{ background: "none", border: "none", color: silenced ? C.cancel : C.subtle, fontSize: 20, cursor: "pointer" }}>{silenced ? "\u{1F507}" : "\u{1F514}"}</button>
+          <div style={{ fontSize: 13, color: C.subtle }}>Total: <span style={{ color: C.text, fontWeight: 700 }}>{fmt(elapsed)}</span></div>
+          <div style={{ fontSize: 13, color: C.subtle }}>Step {brewStep + 1} / {recipe.steps.length}</div>
+          <button onClick={() => setSilenced(!silenced)} style={{ background: "none", border: "none", color: silenced ? C.cancel : C.subtle, fontSize: 24, cursor: "pointer" }}>{silenced ? "\u{1F507}" : "\u{1F514}"}</button>
         </div>
-        <div style={{ padding: "30px 20px", textAlign: "center" }}>
-          <div style={{ display: "inline-block", padding: "4px 18px", borderRadius: 20, background: actionColor[cs.action], color: "#fff", fontSize: 13, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 }}>{cs.action}</div>
-          <div style={{ fontSize: 80, fontWeight: 800, color: C.white, lineHeight: 1, margin: "8px 0", fontVariantNumeric: "tabular-nums" }}>{fmt(stepTime)}</div>
-          <div style={{ width: "85%", height: 6, background: C.card, borderRadius: 3, margin: "16px auto", overflow: "hidden" }}>
-            <div style={{ width: `${pct * 100}%`, height: "100%", background: `linear-gradient(90deg, ${actionColor[cs.action]}, ${C.gold})`, borderRadius: 3, transition: "width 1s linear" }} />
+        <div style={{ padding: "28px 20px", textAlign: "center" }}>
+          <div style={{ display: "inline-block", padding: "5px 20px", borderRadius: 20, background: actionColor[cs.action], color: "#fff", fontSize: 14, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>{cs.action}</div>
+          <div style={{ fontSize: 88, fontWeight: 800, color: C.text, lineHeight: 1, margin: "8px 0", fontVariantNumeric: "tabular-nums" }}>{fmt(stepTime)}</div>
+          <div style={{ width: "85%", height: 8, background: C.border, borderRadius: 4, margin: "18px auto", overflow: "hidden" }}>
+            <div style={{ width: `${pct * 100}%`, height: "100%", background: `linear-gradient(90deg, ${actionColor[cs.action]}, ${C.amber})`, borderRadius: 4, transition: "width 1s linear" }} />
           </div>
-          <p style={{ fontSize: 22, color: C.white, margin: "24px 0 8px", fontWeight: 600, lineHeight: 1.35 }}>{cs.text}</p>
-          {cs.waterTo != null && <p style={{ fontSize: 30, color: C.sky, fontWeight: 800, margin: "14px 0" }}>Pour to {cs.waterTo}g <span style={{ fontSize: 18, color: C.subtle, fontWeight: 400 }}>(+{cs.waterAdd}g)</span></p>}
+          <p style={{ fontSize: 26, color: C.text, margin: "24px 0 8px", fontWeight: 600, lineHeight: 1.35 }}>{cs.text}</p>
+          {cs.waterTo != null && <p style={{ fontSize: 34, color: C.teal, fontWeight: 800, margin: "14px 0" }}>Pour to {cs.waterTo}g <span style={{ fontSize: 20, color: C.subtle, fontWeight: 400 }}>(+{cs.waterAdd}g)</span></p>}
         </div>
         <div style={{ padding: "0 24px", marginTop: 10 }}>
           {recipe.steps.slice(brewStep + 1, brewStep + 3).map((s, i) => (
             <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6, opacity: 0.45 }}>
-              <span style={{ color: actionColor[s.action] }}>{actionIcon[s.action]}</span>
-              <span style={{ fontSize: 13, color: C.subtle }}>{s.text} ({fmt(s.duration)})</span>
+              <span style={{ color: actionColor[s.action], fontSize: 16 }}>{actionIcon[s.action]}</span>
+              <span style={{ fontSize: 14, color: C.subtle }}>{s.text} ({fmt(s.duration)})</span>
             </div>
           ))}
         </div>
