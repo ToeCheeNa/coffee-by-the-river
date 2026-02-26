@@ -64,6 +64,10 @@ const getGrindNum = (grinder, grindDesc) => {
   return GRIND_MAP[grinder][grindDesc] || null;
 };
 
+const GRIND_ORDER = ["Extra fine", "Very fine", "Very fine (espresso-like)", "Fine", "Fine drip", "Fine-medium", "Slightly finer than filter", "Medium-fine", "Medium", "Medium-coarse", "Coarse"];
+const grindRank = (g) => { const i = GRIND_ORDER.indexOf(g); return i >= 0 ? i : 99; };
+const getPlace = (name) => { if (name.includes("— 1st")) return 1; if (name.includes("— 2nd")) return 2; if (name.includes("— 3rd")) return 3; return 9; };
+
 const cToF = (c) => Math.round(c * 9 / 5 + 32);
 const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
@@ -99,6 +103,42 @@ const RECIPES = [
   { id: "espresso-01", name: "Hoffmann Espresso", credit: "James Hoffmann", category: "Espresso-style", coffeeG: 18, waterG: 56, tempC: 100, grind: "Very fine (espresso-like)", method: "Standard", totalTime: 85, steps: [{ action: "pour", text: "Pour all water onto grounds", waterTo: 56, waterAdd: 56, duration: 10 },{ action: "stir", text: "Stir vigorously to remove clumps", duration: 15 },{ action: "wait", text: "Wait for slurry to cool slightly", duration: 30 },{ action: "press", text: "Press firmly and evenly", duration: 30 }] },
   { id: "espresso-02", name: "Concentrated Press", credit: "Community recipe", category: "Espresso-style", coffeeG: 20, waterG: 60, tempC: 96, grind: "Very fine", method: "Inverted", totalTime: 90, steps: [{ action: "pour", text: "Pour water, ensuring all grounds wet", waterTo: 60, waterAdd: 60, duration: 10 },{ action: "stir", text: "Stir firmly 15 times", duration: 15 },{ action: "wait", text: "Steep", duration: 35 },{ action: "press", text: "Flip and press with firm pressure", duration: 30 }] },
   { id: "espresso-03", name: "The Faux-Spresso", credit: "AeroPrecipe community", category: "Espresso-style", coffeeG: 22, waterG: 70, tempC: 93, grind: "Extra fine", method: "Inverted", totalTime: 120, steps: [{ action: "pour", text: "Add water slowly", waterTo: 70, waterAdd: 70, duration: 10 },{ action: "stir", text: "Stir aggressively to form slurry", duration: 15 },{ action: "wait", text: "Steep under pressure", duration: 60 },{ action: "press", text: "Flip and press hard — expect resistance", duration: 35 }] },
+  // ─── NEW: Championship 2025 ───
+  { id: "champ-13", name: "Pop 2025 — 1st", credit: "Némo Pop, Australia (WAC 2025)", category: "Championship", year: 2025, coffeeG: 18, waterG: 170, tempC: 84, grind: "Medium-coarse", method: "Standard", totalTime: 70, steps: [{ action: "pour", text: "Pour 70g bypass water into carafe first", waterTo: 70, waterAdd: 70, duration: 5 },{ action: "pour", text: "Pour 100g brew water over grounds", waterTo: 170, waterAdd: 100, duration: 10 },{ action: "wait", text: "Wait — let bloom", duration: 15 },{ action: "stir", text: "Stir NSNS-WEWE pattern", duration: 10 },{ action: "press", text: "Press gently for 20 seconds", duration: 20 },{ action: "wait", text: "Serve — coffee mixes with bypass", duration: 10 }] },
+  { id: "champ-14", name: "Ahrend 2025 — 2nd", credit: "Jan Ahrend, Switzerland (WAC 2025)", category: "Championship", year: 2025, coffeeG: 18, waterG: 152, tempC: 88, grind: "Medium-fine", method: "Inverted", totalTime: 120, steps: [{ action: "pour", text: "Pour 100g water in circular motion", waterTo: 100, waterAdd: 100, duration: 10 },{ action: "stir", text: "Stir 5 times NSWE pattern", duration: 10 },{ action: "wait", text: "Attach cap, push out air", duration: 10 },{ action: "wait", text: "Steep until 1:30", duration: 40 },{ action: "press", text: "Flip, swirl, press slowly to 66g output", duration: 30 },{ action: "pour", text: "Dilute to 152g total", waterTo: 152, waterAdd: 52, duration: 20 }] },
+  { id: "champ-15", name: "Vyas 2025 — 3rd", credit: "Dharun Vyas, India (WAC 2025)", category: "Championship", year: 2025, coffeeG: 16, waterG: 220, tempC: 88, grind: "Coarse", method: "Inverted", totalTime: 180, steps: [{ action: "pour", text: "Pour 65ml water in spirals", waterTo: 65, waterAdd: 65, duration: 10 },{ action: "wait", text: "Wait 20 seconds", duration: 20 },{ action: "pour", text: "Pour remaining water with heavy center flow", waterTo: 208, waterAdd: 143, duration: 10 },{ action: "wait", text: "Wait, then attach cap and squeeze out air", duration: 20 },{ action: "wait", text: "Flip, swirl aggressively 4-5 times, settle 10s", duration: 20 },{ action: "press", text: "Press steadily for 60 seconds", duration: 60 },{ action: "pour", text: "Add 12ml room temp water to finish", waterTo: 220, waterAdd: 12, duration: 10 },{ action: "wait", text: "Swirl carafe to cool, serve", duration: 30 }] },
+  // ─── NEW: Championship 2024 3rd ───
+  { id: "champ-16", name: "Jamika 2024 — 3rd", credit: "Mahmoud Jamika, Egypt (WAC 2024)", category: "Championship", year: 2024, coffeeG: 18, waterG: 180, tempC: 80, grind: "Coarse", method: "Inverted", totalTime: 120, steps: [{ action: "pour", text: "Add 50ml water at 80°C", waterTo: 50, waterAdd: 50, duration: 8 },{ action: "stir", text: "Stir gently in circles 5 times", duration: 10 },{ action: "wait", text: "Bloom for 1 minute", duration: 42 },{ action: "pour", text: "Add 100ml water at 75°C", waterTo: 150, waterAdd: 100, duration: 10 },{ action: "wait", text: "Attach cap, squeeze air, stir 20 times", duration: 10 },{ action: "press", text: "Flip and press for 30 seconds", duration: 30 },{ action: "pour", text: "Add 30ml room temp water", waterTo: 180, waterAdd: 30, duration: 10 }] },
+  // ─── NEW: Championship 2023 ───
+  { id: "champ-17", name: "Wipvasutt 2023 — 1st", credit: "Tay Wipvasutt, Thailand (WAC 2023)", category: "Championship", year: 2023, coffeeG: 18, waterG: 155, tempC: 89, grind: "Medium-coarse", method: "Inverted", totalTime: 125, steps: [{ action: "pour", text: "Add 16g coffee, pour 100g water", waterTo: 100, waterAdd: 100, duration: 10 },{ action: "wait", text: "Wait to 0:30", duration: 20 },{ action: "stir", text: "Stir with chopstick 5 seconds", duration: 5 },{ action: "pour", text: "Add 2g extra coffee at 0:45", waterTo: 100, waterAdd: 0, duration: 5 },{ action: "stir", text: "Stir again at 0:55", duration: 5 },{ action: "wait", text: "Push plunger to remove air, close cap", duration: 20 },{ action: "press", text: "Flip and press at 1:35 for 30 seconds", duration: 30 },{ action: "pour", text: "Bypass with room temp + hot water to 155g", waterTo: 155, waterAdd: 55, duration: 30 }] },
+  { id: "champ-18", name: "Bülow 2023 — 2nd", credit: "Carlo Graf Bülow, Germany (WAC 2023)", category: "Championship", year: 2023, coffeeG: 18, waterG: 150, tempC: 100, grind: "Medium-coarse", method: "Inverted", totalTime: 110, steps: [{ action: "pour", text: "Add 50g water for blooming", waterTo: 50, waterAdd: 50, duration: 8 },{ action: "stir", text: "Stir 32 times very fast", duration: 7 },{ action: "pour", text: "Add water to 160g, rinse filters", waterTo: 160, waterAdd: 110, duration: 15 },{ action: "wait", text: "Lock filter cap, wait until 1:25", duration: 30 },{ action: "press", text: "Flip and push slowly until 1:50", duration: 25 },{ action: "pour", text: "Dilute to 150g with room temp water", waterTo: 150, waterAdd: 15, duration: 10 },{ action: "stir", text: "Pour back and forth between servers 10x", duration: 15 }] },
+  { id: "champ-19", name: "Zhang L. 2023 — 3rd", credit: "Leon Zhang, China (WAC 2023)", category: "Championship", year: 2023, coffeeG: 18, waterG: 235, tempC: 93, grind: "Medium", method: "Standard", totalTime: 100, steps: [{ action: "pour", text: "Add 100g water at 93°C, stir 15 rounds", waterTo: 100, waterAdd: 100, duration: 15 },{ action: "wait", text: "Place plunger, create vacuum, soak 45s", duration: 45 },{ action: "press", text: "Press at constant speed for 5 seconds", duration: 5 },{ action: "pour", text: "Add 135g water at 75°C, stir 5 turns", waterTo: 235, waterAdd: 135, duration: 10 },{ action: "wait", text: "Place plunger, vacuum, soak", duration: 15 },{ action: "press", text: "Press down clean at constant speed", duration: 10 }] },
+  // ─── NEW: Championship 2022 ───
+  { id: "champ-20", name: "Little 2022 — 1st", credit: "Jibbi Little, Australia (WAC 2022)", category: "Championship", year: 2022, coffeeG: 18, waterG: 150, tempC: 90, grind: "Medium", method: "Inverted", totalTime: 130, steps: [{ action: "pour", text: "Pour 94ml water", waterTo: 94, waterAdd: 94, duration: 10 },{ action: "stir", text: "Stir 35 times gently", duration: 20 },{ action: "wait", text: "Wait until 1:20, then cap and press air out", duration: 30 },{ action: "press", text: "Flip at 1:30, press for 30 seconds", duration: 30 },{ action: "pour", text: "Bypass with 90°C water to 150g total", waterTo: 150, waterAdd: 56, duration: 15 },{ action: "wait", text: "Serve at target TDS 1.3–1.35", duration: 25 }] },
+  { id: "champ-21", name: "Derutter 2022 — 2nd", credit: "Simon Derutter, Belgium (WAC 2022)", category: "Championship", year: 2022, coffeeG: 18, waterG: 156, tempC: 85, grind: "Medium-fine", method: "Standard", totalTime: 105, steps: [{ action: "pour", text: "Pour 140ml water", waterTo: 140, waterAdd: 140, duration: 10 },{ action: "stir", text: "Stir three times", duration: 5 },{ action: "wait", text: "Place plunger, pull back for vacuum, brew to 1:15", duration: 60 },{ action: "press", text: "Press for 30 seconds until hiss", duration: 30 }] },
+  { id: "champ-22", name: "Ho 2022 — 3rd", credit: "Jennifer Rui Ping Ho, Singapore (WAC 2022)", category: "Championship", year: 2022, coffeeG: 18, waterG: 200, tempC: 84, grind: "Medium-coarse", method: "Inverted", totalTime: 120, steps: [{ action: "pour", text: "Pour 100ml water", waterTo: 100, waterAdd: 100, duration: 10 },{ action: "stir", text: "Stir gently, bloom 30 seconds", duration: 30 },{ action: "pour", text: "Add 100ml water, stir gently", waterTo: 200, waterAdd: 100, duration: 10 },{ action: "wait", text: "Wait until 1:30", duration: 10 },{ action: "press", text: "Flip and press for 30 seconds", duration: 30 },{ action: "wait", text: "Aerate and serve", duration: 30 }] },
+  // ─── NEW: Championship 2021 ───
+  { id: "champ-23", name: "Merikanto 2021 — 1st", credit: "Tuomas Merikanto, Finland (WAC 2021)", category: "Championship", year: 2021, coffeeG: 18, waterG: 200, tempC: 80, grind: "Medium", method: "Inverted", totalTime: 120, steps: [{ action: "pour", text: "Pour 100ml water", waterTo: 100, waterAdd: 100, duration: 10 },{ action: "stir", text: "Stir gently, bloom 30 seconds", duration: 30 },{ action: "pour", text: "Add 100ml water, stir gently", waterTo: 200, waterAdd: 100, duration: 10 },{ action: "wait", text: "Wait until 1:30", duration: 10 },{ action: "press", text: "Flip and press for 30 seconds", duration: 30 },{ action: "wait", text: "Aerate and serve", duration: 30 }] },
+  { id: "champ-24", name: "Mallee 2021 — 2nd", credit: "Maru Mallee, Netherlands (WAC 2021)", category: "Championship", year: 2021, coffeeG: 18, waterG: 186, tempC: 93, grind: "Medium-fine", method: "Inverted", totalTime: 135, steps: [{ action: "pour", text: "Pour 150g water", waterTo: 150, waterAdd: 150, duration: 12 },{ action: "stir", text: "Stir firmly 20 times", duration: 13 },{ action: "wait", text: "Screw on cap, press out air", duration: 5 },{ action: "wait", text: "Steep until 1:50", duration: 60 },{ action: "press", text: "Flip, swirl 3x, tap 2x, press gently to 2:15", duration: 25 },{ action: "pour", text: "Add 36g room temp water", waterTo: 186, waterAdd: 36, duration: 10 },{ action: "stir", text: "Swirl to cool for 1 minute", duration: 10 }] },
+  { id: "champ-25", name: "Smith 2021 — 3rd", credit: "Brandon Smith, South Africa (WAC 2021)", category: "Championship", year: 2021, coffeeG: 18, waterG: 220, tempC: 88, grind: "Medium-fine", method: "Inverted", totalTime: 135, steps: [{ action: "pour", text: "Pour 140g water within 10 seconds", waterTo: 140, waterAdd: 140, duration: 10 },{ action: "stir", text: "Stir back to front gently 5 times", duration: 10 },{ action: "wait", text: "Brew, prepare filter, cap and press air out", duration: 40 },{ action: "wait", text: "Continue steeping", duration: 30 },{ action: "press", text: "Flip and press for 30 seconds", duration: 30 },{ action: "pour", text: "Add water to reach 220g", waterTo: 220, waterAdd: 80, duration: 15 }] },
+  // ─── NEW: Championship 2018 ───
+  { id: "champ-26", name: "Garay 2018 — 1st", credit: "Carolina Ibarra Garay, USA (WAC 2018)", category: "Championship", year: 2018, coffeeG: 35, waterG: 300, tempC: 85, grind: "Medium-coarse", method: "Inverted", totalTime: 120, steps: [{ action: "pour", text: "Pour 100g water over 30 seconds", waterTo: 100, waterAdd: 100, duration: 30 },{ action: "stir", text: "Stir vigorously with chopsticks 30 seconds", duration: 30 },{ action: "press", text: "Cap, flip, press into server for 30 sec", duration: 30 },{ action: "pour", text: "Add 60g hot + 40g room temp water", waterTo: 300, waterAdd: 200, duration: 30 }] },
+  { id: "champ-27", name: "Pinchukov 2018 — 3rd", credit: "Evgeni Pinchukov, Belarus (WAC 2018)", category: "Championship", year: 2018, coffeeG: 15, waterG: 230, tempC: 80, grind: "Coarse", method: "Standard", totalTime: 95, steps: [{ action: "pour", text: "Add coffee and 50g water, let bloom", waterTo: 50, waterAdd: 50, duration: 10 },{ action: "stir", text: "Stir briefly", duration: 5 },{ action: "wait", text: "Wait 30 seconds", duration: 15 },{ action: "pour", text: "Add 180g water", waterTo: 230, waterAdd: 180, duration: 10 },{ action: "wait", text: "Wait until 1:05, then stir", duration: 25 },{ action: "press", text: "Press — stop when grounds visible above water", duration: 30 }] },
+  // ─── NEW: Championship 2017 2nd/3rd ───
+  { id: "champ-28", name: "Narisawa 2017 — 2nd", credit: "Yusuke Narisawa, Japan (WAC 2017)", category: "Championship", year: 2017, coffeeG: 35, waterG: 290, tempC: 84, grind: "Coarse", method: "Inverted", totalTime: 105, steps: [{ action: "pour", text: "Pour 150g water in 15 seconds", waterTo: 150, waterAdd: 150, duration: 15 },{ action: "stir", text: "Stir continuously for 20 seconds", duration: 20 },{ action: "wait", text: "Cap and wait", duration: 10 },{ action: "press", text: "Flip, swirl, press for 45 seconds — stop at hiss", duration: 45 },{ action: "pour", text: "Add 160–200g hot water to taste", waterTo: 290, waterAdd: 140, duration: 15 }] },
+  { id: "champ-29", name: "Park 2017 — 3rd", credit: "Jeongsu Park, South Korea (WAC 2017)", category: "Championship", year: 2017, coffeeG: 35, waterG: 290, tempC: 84, grind: "Coarse", method: "Inverted", totalTime: 105, steps: [{ action: "pour", text: "Pour 150g water", waterTo: 150, waterAdd: 150, duration: 15 },{ action: "stir", text: "Stir vigorously", duration: 15 },{ action: "wait", text: "Wait until 1:00", duration: 15 },{ action: "press", text: "Flip and press for 35 seconds", duration: 35 },{ action: "pour", text: "Bypass with hot water to taste", waterTo: 290, waterAdd: 140, duration: 15 },{ action: "wait", text: "Serve", duration: 10 }] },
+  // ─── NEW: Championship 2016 2nd/3rd ───
+  { id: "champ-30", name: "Dittmar 2016 — 2nd", credit: "Jérôme Dittmar, France (WAC 2016)", category: "Championship", year: 2016, coffeeG: 27, waterG: 230, tempC: 82, grind: "Medium-coarse", method: "Inverted", totalTime: 130, steps: [{ action: "pour", text: "Pour 40g water for bloom", waterTo: 40, waterAdd: 40, duration: 10 },{ action: "wait", text: "Let steep 20 seconds", duration: 20 },{ action: "pour", text: "Pour water to 230g over 40 seconds", waterTo: 230, waterAdd: 190, duration: 40 },{ action: "press", text: "Flip and press for 40 seconds", duration: 40 },{ action: "wait", text: "Serve", duration: 20 }] },
+  { id: "champ-31", name: "Rocco 2016 — 3rd", credit: "Hugo Sousa Rocco, Brazil (WAC 2016)", category: "Championship", year: 2016, coffeeG: 27, waterG: 200, tempC: 82, grind: "Medium-coarse", method: "Standard", totalTime: 270, steps: [{ action: "pour", text: "Add 60g water", waterTo: 60, waterAdd: 60, duration: 10 },{ action: "stir", text: "Stir for 12 seconds", duration: 12 },{ action: "wait", text: "Wait 1 minute", duration: 48 },{ action: "pour", text: "Add 110g water", waterTo: 170, waterAdd: 110, duration: 10 },{ action: "wait", text: "Wait 2.5 minutes", duration: 150 },{ action: "press", text: "Press for 30 seconds", duration: 30 },{ action: "pour", text: "Top up with water to 200g", waterTo: 200, waterAdd: 30, duration: 10 }] },
+  // ─── NEW: Championship 2016 1st (corrected), 2015 2nd/3rd ───
+  { id: "champ-32", name: "Kucharczyk 2016 — 1st", credit: "Filip Kucharczyk, Poland (WAC 2016)", category: "Championship", year: 2016, coffeeG: 35, waterG: 270, tempC: 81, grind: "Coarse", method: "Inverted", totalTime: 120, steps: [{ action: "pour", text: "Pour 150g water over 15 seconds", waterTo: 150, waterAdd: 150, duration: 15 },{ action: "stir", text: "Stir until 30 seconds on timer", duration: 15 },{ action: "wait", text: "Cap and wait until 1:00", duration: 30 },{ action: "press", text: "Flip, swirl, and press for 30 seconds", duration: 30 },{ action: "pour", text: "Add 100–120g hot water to taste", waterTo: 270, waterAdd: 120, duration: 15 },{ action: "wait", text: "Serve", duration: 15 }] },
+  { id: "champ-33", name: "Hatch 2015 — 2nd", credit: "Nick Hatch, Canada (WAC 2015)", category: "Championship", year: 2015, coffeeG: 20, waterG: 230, tempC: 78, grind: "Fine", method: "Inverted", totalTime: 100, steps: [{ action: "pour", text: "Pour 50g water to bloom", waterTo: 50, waterAdd: 50, duration: 10 },{ action: "stir", text: "Stir gently", duration: 5 },{ action: "wait", text: "Bloom 30 seconds", duration: 25 },{ action: "pour", text: "Add rest of water to 230g in 60 seconds", waterTo: 230, waterAdd: 180, duration: 30 },{ action: "press", text: "Flip and press for 30 seconds", duration: 30 }] },
+  // ─── NEW: Classic extras ───
+  { id: "classic-16", name: "Japanese Iced AeroPress", credit: "Community recipe", category: "Classic", coffeeG: 18, waterG: 240, tempC: 96, grind: "Medium-fine", method: "Inverted", totalTime: 90, steps: [{ action: "pour", text: "Place 120g ice in serving glass. Pour 120g hot water over grounds", waterTo: 120, waterAdd: 120, duration: 10 },{ action: "stir", text: "Stir 5 times", duration: 10 },{ action: "wait", text: "Steep", duration: 30 },{ action: "press", text: "Flip and press directly over ice", duration: 30 },{ action: "stir", text: "Stir to chill, add ice if needed", duration: 10 }] },
+  { id: "classic-17", name: "The Concentrate + Milk", credit: "Community recipe", category: "Classic", coffeeG: 20, waterG: 80, tempC: 92, grind: "Fine", method: "Inverted", totalTime: 90, steps: [{ action: "pour", text: "Pour 80g water over grounds", waterTo: 80, waterAdd: 80, duration: 10 },{ action: "stir", text: "Stir firmly 10 times", duration: 10 },{ action: "wait", text: "Steep", duration: 40 },{ action: "press", text: "Flip and press into your favorite mug", duration: 30 }] },
+  { id: "classic-18", name: "The Patient Pour", credit: "Community recipe", category: "Classic", coffeeG: 15, waterG: 220, tempC: 86, grind: "Medium-coarse", method: "Standard", totalTime: 180, steps: [{ action: "pour", text: "Pour 55g water slowly", waterTo: 55, waterAdd: 55, duration: 15 },{ action: "wait", text: "Bloom for 30 seconds", duration: 30 },{ action: "pour", text: "Pour another 55g", waterTo: 110, waterAdd: 55, duration: 15 },{ action: "wait", text: "Wait 30 seconds", duration: 30 },{ action: "pour", text: "Pour another 55g", waterTo: 165, waterAdd: 55, duration: 15 },{ action: "wait", text: "Wait 30 seconds", duration: 30 },{ action: "pour", text: "Final pour to 220g", waterTo: 220, waterAdd: 55, duration: 15 },{ action: "press", text: "Press gently", duration: 20 }] },
+  { id: "classic-19", name: "The Quick & Strong", credit: "Community recipe", category: "Classic", coffeeG: 17, waterG: 190, tempC: 95, grind: "Fine", method: "Standard", totalTime: 60, steps: [{ action: "pour", text: "Pour all water quickly", waterTo: 190, waterAdd: 190, duration: 10 },{ action: "stir", text: "Stir vigorously 10 times", duration: 10 },{ action: "press", text: "Press immediately — no wait", duration: 30 },{ action: "wait", text: "Serve", duration: 10 }] },
+  { id: "classic-20", name: "The Long Steep", credit: "Community recipe", category: "Classic", coffeeG: 14, waterG: 210, tempC: 82, grind: "Medium", method: "Inverted", totalTime: 300, steps: [{ action: "pour", text: "Pour all water", waterTo: 210, waterAdd: 210, duration: 10 },{ action: "stir", text: "Stir gently 3 times", duration: 10 },{ action: "wait", text: "Walk away — steep 4 minutes", duration: 240 },{ action: "press", text: "Flip and press slowly", duration: 30 },{ action: "wait", text: "Let cool slightly and serve", duration: 10 }] },
 ];
 
 const actionColor = { pour: C.teal, stir: C.amber, wait: C.subtle, press: C.sage };
@@ -196,12 +236,15 @@ function App() {
   const [showWelcome, setShowWelcome] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [sortBy, setSortBy] = useState("default");
+  const [sortReversed, setSortReversed] = useState(false);
   const [brewStep, setBrewStep] = useState(0);
   const [stepTime, setStepTime] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [isBrewing, setIsBrewing] = useState(false);
   const [brewDone, setBrewDone] = useState(false);
   const [silenced, setSilenced] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const [doneRating, setDoneRating] = useState(0);
   const [doneNote, setDoneNote] = useState("");
   const [building, setBuilding] = useState(false);
@@ -224,11 +267,15 @@ function App() {
   let filtered = activeTab === "Favorites" ? all.filter((r) => data.favorites.includes(r.id)) : activeTab === "My Recipes" ? data.customRecipes : all.filter((r) => r.category === activeTab);
 
   // Sorting
-  if (sortBy === "alpha") filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
-  else if (sortBy === "time-short") filtered = [...filtered].sort((a, b) => a.totalTime - b.totalTime);
-  else if (sortBy === "time-long") filtered = [...filtered].sort((a, b) => b.totalTime - a.totalTime);
-  else if (sortBy === "rating") filtered = [...filtered].sort((a, b) => (data.ratings[b.id] || 0) - (data.ratings[a.id] || 0));
-  else if (sortBy === "year" && activeTab === "Championship") filtered = [...filtered].sort((a, b) => (b.year || 0) - (a.year || 0));
+  const dir = sortReversed ? -1 : 1;
+  if (sortBy === "alpha") filtered = [...filtered].sort((a, b) => dir * a.name.localeCompare(b.name));
+  else if (sortBy === "rating") filtered = [...filtered].sort((a, b) => dir * ((data.ratings[b.id] || 0) - (data.ratings[a.id] || 0)));
+  else if (sortBy === "temp") filtered = [...filtered].sort((a, b) => dir * (a.tempC - b.tempC));
+  else if (sortBy === "coffee") filtered = [...filtered].sort((a, b) => dir * (a.coffeeG - b.coffeeG));
+  else if (sortBy === "grind") filtered = [...filtered].sort((a, b) => dir * (grindRank(a.grind) - grindRank(b.grind)));
+  else if (sortBy === "method") filtered = [...filtered].sort((a, b) => dir * (a.method === "Standard" ? -1 : 1) - dir * (b.method === "Standard" ? -1 : 1));
+  else if (sortBy === "year") filtered = [...filtered].sort((a, b) => dir * ((b.year || 0) - (a.year || 0)));
+  else if (sortBy === "place") filtered = [...filtered].sort((a, b) => dir * (getPlace(a.name) - getPlace(b.name)));
 
   const wakeLock = async () => { try { if ("wakeLock" in navigator) wakeRef.current = await navigator.wakeLock.request("screen"); } catch {} };
   const wakeRelease = () => { if (wakeRef.current) { wakeRef.current.release(); wakeRef.current = null; } };
@@ -250,13 +297,34 @@ function App() {
     return () => clearInterval(timerRef.current);
   }, [isBrewing, brewStep, recipe, silenced]);
 
-  const startBrew = () => { unlockAudio(); setBrewStep(0); setStepTime(recipe.steps[0].duration); setElapsed(0); setIsBrewing(true); setBrewDone(false); setDoneRating(data.ratings[recipe.id] || 0); setDoneNote(data.notes[recipe.id] || ""); setScreen("brew"); wakeLock(); };
-  const cancelBrew = () => { clearInterval(timerRef.current); setIsBrewing(false); setBrewDone(false); wakeRelease(); setScreen("detail"); };
+  // Scroll-to-top listener
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 400);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Countdown timer
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const t = setTimeout(() => {
+      if (countdown === 1) {
+        setCountdown(0);
+        setIsBrewing(true);
+      } else {
+        setCountdown(countdown - 1);
+      }
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [countdown]);
+
+  const startBrew = () => { unlockAudio(); setBrewStep(0); setStepTime(recipe.steps[0].duration); setElapsed(0); setIsBrewing(false); setBrewDone(false); setDoneRating(data.ratings[recipe.id] || 0); setDoneNote(data.notes[recipe.id] || ""); setScreen("brew"); setCountdown(3); wakeLock(); };
+  const cancelBrew = () => { clearInterval(timerRef.current); setIsBrewing(false); setBrewDone(false); setCountdown(0); wakeRelease(); setScreen("detail"); };
   const toggleFav = (id) => setData((p) => ({ ...p, favorites: p.favorites.includes(id) ? p.favorites.filter((f) => f !== id) : [...p.favorites, id] }));
   const rate = (id, r) => setData((p) => ({ ...p, ratings: { ...p.ratings, [id]: r } }));
   const saveNt = (id, n) => setData((p) => ({ ...p, notes: { ...p.notes, [id]: n } }));
   const saveDone = () => { if (doneRating > 0) rate(recipe.id, doneRating); if (doneNote.trim()) saveNt(recipe.id, doneNote); setScreen("detail"); setBrewDone(false); };
-  const exportD = () => { const b = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href = u; a.download = "aeropress-recipes-backup.json"; a.click(); URL.revokeObjectURL(u); };
+  const exportD = () => { const b = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href = u; const d = new Date().toISOString().slice(0, 10); a.download = `aeropress-backup-${d}.json`; a.click(); URL.revokeObjectURL(u); };
   const importD = (e) => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => { try { const d = JSON.parse(ev.target.result); if (d.favorites && d.ratings) setData(d); } catch {} }; r.readAsText(f); };
   const saveCustom = () => { const r = { ...form, id: editId || `custom-${Date.now()}`, coffeeG: parseFloat(form.coffeeG) || 0, waterG: parseFloat(form.waterG) || 0, tempC: parseFloat(form.tempC) || 0, category: "My Recipes", credit: "My recipe", totalTime: form.steps.reduce((s, st) => s + (parseInt(st.duration) || 0), 0), steps: form.steps.map((s) => ({ ...s, duration: parseInt(s.duration) || 0, waterTo: s.waterTo ? parseFloat(s.waterTo) : undefined, waterAdd: s.waterAdd ? parseFloat(s.waterAdd) : undefined })) }; setData((p) => { const idx = p.customRecipes.findIndex((x) => x.id === r.id); const u = [...p.customRecipes]; if (idx >= 0) u[idx] = r; else u.push(r); return { ...p, customRecipes: u }; }); setBuilding(false); setEditId(null); setForm(emptyForm); };
   const deleteCustom = (id) => { setData((p) => ({ ...p, customRecipes: p.customRecipes.filter((r) => r.id !== id), favorites: p.favorites.filter((f) => f !== id) })); setScreen("home"); };
@@ -281,9 +349,9 @@ function App() {
   const Welcome = () => (
     <div style={{ padding: "0 16px 6px" }}>
       <div style={{ background: C.card, borderRadius: 14, padding: "18px 16px", border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
-        <p style={{ color: C.text, fontSize: 14, lineHeight: 1.7, margin: 0 }}>A step-by-step AeroPress brew timer with 30 curated recipes from world champions, renowned baristas, and the coffee community. Pick a recipe, follow the guided timer, and brew a better cup.</p>
+        <p style={{ color: C.text, fontSize: 14, lineHeight: 1.7, margin: 0, fontWeight: 500 }}>Pick a recipe, follow the step-by-step guided timer, and brew a better cup. Use the ⚙ Grinder button to see grind settings for your specific grinder. Build your own recipes in the My Recipes tab. Sort, rate, and add personal tasting notes to any recipe.</p>
         <div style={{ width: 40, height: 2, background: C.terra, margin: "12px 0", borderRadius: 1 }} />
-        <p style={{ color: C.subtle, fontSize: 13, lineHeight: 1.7, margin: 0 }}>This app was designed through conversation and collaboration between Tochina and Claude AI. About two hours of back-and-forth discussion shaped every detail — the concept, features, user flow, color palette, and design — before a single line of code was written. Proof that thoughtful conversation can be a powerful development tool.</p>
+        <p style={{ color: C.subtle, fontSize: 13, lineHeight: 1.7, margin: 0 }}>Curated AeroPress recipes from World Championship winners, renowned baristas, and the coffee community. Designed collaboratively by Tochina and Claude AI.</p>
         <button onClick={() => setShowWelcome(false)} style={{ background: "none", border: "none", color: C.accent, fontSize: 13, cursor: "pointer", padding: "8px 0 0", fontWeight: 600 }}>Dismiss</button>
       </div>
     </div>
@@ -325,25 +393,35 @@ function App() {
         {showWelcome && <Welcome />}
         {showSettings && <Settings />}
         <div style={{ display: "flex", overflowX: "auto", borderBottom: `1px solid ${C.border}`, scrollbarWidth: "none" }}>
-          {tabs.map((t) => (
-            <button key={t} onClick={() => { setActiveTab(t); setBuilding(false); setSortBy("default"); }}
+          {tabs.map((t) => {
+            const cnt = t === "Favorites" ? all.filter((r) => data.favorites.includes(r.id)).length : t === "My Recipes" ? data.customRecipes.length : all.filter((r) => r.category === t).length;
+            return (
+            <button key={t} onClick={() => { setActiveTab(t); setBuilding(false); setSortBy("default"); setSortReversed(false); }}
               style={{ padding: "10px 13px", fontSize: 12, fontWeight: activeTab === t ? 700 : 400, color: activeTab === t ? C.accent : C.subtle, borderBottom: activeTab === t ? `2px solid ${C.accent}` : "2px solid transparent", background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
-              {t === "Favorites" ? "\u2605 " + t : t}
+              {t === "Favorites" ? `★ ${t}` : t}{cnt > 0 ? ` (${cnt})` : ""}
             </button>
-          ))}
+          );})}
         </div>
         {/* Sort bar */}
         {!building && filtered.length > 1 && (
           <div style={{ padding: "8px 14px 0", display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 12, color: C.subtle }}>Sort:</span>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={{ ...S.select, width: "auto", padding: "5px 10px", fontSize: 12 }}>
+            <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setSortReversed(false); }} style={{ ...S.select, width: "auto", padding: "5px 10px", fontSize: 12 }}>
               <option value="default">Default</option>
               <option value="alpha">A → Z</option>
-              <option value="time-short">Shortest first</option>
-              <option value="time-long">Longest first</option>
               <option value="rating">Highest rated</option>
-              {activeTab === "Championship" && <option value="year">Newest first</option>}
+              <option value="temp">Temp</option>
+              <option value="coffee">Coffee amount</option>
+              <option value="grind">Grind level</option>
+              <option value="method">Method</option>
+              {activeTab === "Championship" && <option value="year">Year</option>}
+              {activeTab === "Championship" && <option value="place">Place</option>}
             </select>
+            {sortBy !== "default" && (
+              <button onClick={() => setSortReversed(!sortReversed)} title={sortReversed ? "Reversed" : "Normal order"} style={{ background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "4px 10px", fontSize: 14, cursor: "pointer", color: C.accent, fontWeight: 700, lineHeight: 1 }}>
+                {sortReversed ? "▲" : "▼"}
+              </button>
+            )}
           </div>
         )}
         {activeTab === "My Recipes" && !building && <div style={{ padding: "12px 14px 0" }}><button style={{ ...S.primaryBtn, marginTop: 0 }} onClick={() => { setForm(emptyForm); setBuilding(true); setEditId(null); }}>+ New Recipe</button></div>}
@@ -384,8 +462,14 @@ function App() {
           <div key={r.id} style={{ background: C.card, margin: "10px 14px", borderRadius: 12, padding: "14px 16px", cursor: "pointer", borderLeft: `3px solid ${catBorder(r.category)}`, boxShadow: C.shadow }}
             onClick={() => { setRecipe(r); setScreen("detail"); setShowNotes(false); setNoteText(data.notes[r.id] || ""); }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ flex: 1 }}><p style={{ fontSize: 16, fontWeight: 600, color: C.text, margin: 0 }}>{r.name}</p><p style={{ fontSize: 12, color: C.subtle, margin: "2px 0 0" }}>{r.credit}</p></div>
-              <button style={S.star(data.favorites.includes(r.id))} onClick={(e) => { e.stopPropagation(); toggleFav(r.id); }}>★</button>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 16, fontWeight: 600, color: C.text, margin: 0 }}>{r.name}</p>
+                <p style={{ fontSize: 12, color: C.subtle, margin: "2px 0 0" }}>{r.credit}</p>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {r.year && <span style={{ background: getPlace(r.name) === 1 ? C.gold : getPlace(r.name) === 2 ? C.subtle : C.terra, color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 10, whiteSpace: "nowrap" }}>{r.year} · {getPlace(r.name) === 1 ? "1st" : getPlace(r.name) === 2 ? "2nd" : "3rd"}</span>}
+                <button style={S.star(data.favorites.includes(r.id))} onClick={(e) => { e.stopPropagation(); toggleFav(r.id); }}>★</button>
+              </div>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 10 }}>
               {[`${r.coffeeG}g`, `${r.waterG}g`, `${cToF(r.tempC)}°F`, grindPill(r.grind), r.method, fmt(r.totalTime)].map((v, i) => (
@@ -399,6 +483,7 @@ function App() {
           <button style={S.secBtn} onClick={exportD}>Export Backup</button>
           <label style={{ ...S.secBtn, display: "inline-flex", alignItems: "center", cursor: "pointer" }}>Import Backup<input type="file" accept=".json" onChange={importD} style={{ display: "none" }} /></label>
         </div>}
+        {showScrollTop && <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ position: "fixed", bottom: 24, right: 24, width: 44, height: 44, borderRadius: "50%", background: C.accent, color: "#fff", border: "none", fontSize: 20, cursor: "pointer", boxShadow: "0 3px 12px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>↑</button>}
       </div>
     );
   }
@@ -450,6 +535,20 @@ function App() {
 
   // ═══ BREW ════════════════════════════════════════════
   if (screen === "brew" && recipe) {
+    // Countdown
+    if (countdown > 0) {
+      const countLabels = { 3: "Ready", 2: "Set", 1: "Go!" };
+      return (
+        <div style={S.app}>
+          <div style={{ padding: "80px 20px", textAlign: "center" }}>
+            <p style={{ fontSize: 28, fontWeight: 700, color: C.terra, margin: "0 0 20px", letterSpacing: 2, textTransform: "uppercase" }}>{countLabels[countdown]}</p>
+            <div style={{ fontSize: 120, fontWeight: 800, color: C.accent, lineHeight: 1, margin: "10px 0" }}>{countdown}</div>
+            <p style={{ fontSize: 16, color: C.subtle, margin: "24px 0 0" }}>{recipe.name}</p>
+          </div>
+          <div style={{ padding: "30px 20px", textAlign: "center" }}><button style={S.cancelBtn} onClick={() => { setCountdown(0); setIsBrewing(false); wakeRelease(); setScreen("detail"); }}>Cancel</button></div>
+        </div>
+      );
+    }
     const cs = recipe.steps[brewStep];
     if (brewDone) {
       return (
