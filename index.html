@@ -71,6 +71,9 @@ const getPlace = (name) => { if (name.includes("— 1st")) return 1; if (name.in
 const cToF = (c) => Math.round(c * 9 / 5 + 32);
 const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
+// ─── API ──────────────────────────────────────────────────
+const API = "https://bobrew.dev/api";
+
 // ─── Recipe Data ───────────────────────────────────────────
 const RECIPES = [
   { id: "classic-01", name: "Alan Adler Original", credit: "Alan Adler (AeroPress inventor)", category: "Classic", coffeeG: 15, waterG: 220, tempC: 80, grind: "Fine drip", method: "Standard", totalTime: 60, steps: [{ action: "pour", text: "Add coffee and pour water", waterTo: 220, waterAdd: 220, duration: 10 },{ action: "stir", text: "Stir gently", duration: 10 },{ action: "press", text: "Press slowly and steadily", duration: 30 }] },
@@ -146,37 +149,65 @@ const actionIcon = { pour: "\u{1F4A7}", stir: "\u{1F504}", wait: "\u{231B}", pre
 
 // ─── Audio ─────────────────────────────────────────────────
 let audioCtx = null;
-const unlockAudio = () => {
+const getCtx = () => {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+};
+const unlockAudio = () => { try { getCtx(); } catch (e) {} };
+
+// Bell-like tone with harmonics and smooth decay
+const playTone = (freq, duration = 0.5, vol = 0.2, delay = 0) => {
   try {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const buf = audioCtx.createBuffer(1, 1, 22050);
-    const src = audioCtx.createBufferSource();
-    src.buffer = buf; src.connect(audioCtx.destination); src.start(0);
+    const ctx = getCtx();
+    const t = ctx.currentTime + delay;
+    // Fundamental
+    const o1 = ctx.createOscillator(); const g1 = ctx.createGain();
+    o1.type = "sine"; o1.frequency.value = freq;
+    g1.gain.setValueAtTime(vol, t);
+    g1.gain.exponentialRampToValueAtTime(0.001, t + duration);
+    o1.connect(g1); g1.connect(ctx.destination);
+    // Soft overtone for warmth
+    const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
+    o2.type = "sine"; o2.frequency.value = freq * 2;
+    g2.gain.setValueAtTime(vol * 0.15, t);
+    g2.gain.exponentialRampToValueAtTime(0.001, t + duration * 0.6);
+    o2.connect(g2); g2.connect(ctx.destination);
+    // Gentle third harmonic
+    const o3 = ctx.createOscillator(); const g3 = ctx.createGain();
+    o3.type = "sine"; o3.frequency.value = freq * 3;
+    g3.gain.setValueAtTime(vol * 0.05, t);
+    g3.gain.exponentialRampToValueAtTime(0.001, t + duration * 0.3);
+    o3.connect(g3); g3.connect(ctx.destination);
+    [o1, o2, o3].forEach((o) => { o.start(t); o.stop(t + duration); });
   } catch (e) {}
 };
+
+// Step transition: warm two-note chime (D5 → A5)
 const playChime = () => {
-  try {
-    const ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.connect(g); g.connect(ctx.destination); o.type = "sine";
-    o.frequency.setValueAtTime(660, ctx.currentTime);
-    o.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
-    g.gain.setValueAtTime(0.3, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-    o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.4);
-  } catch (e) {}
+  playTone(587, 0.4, 0.2, 0);
+  playTone(880, 0.5, 0.18, 0.12);
 };
+
+// Brew complete: celebratory ascending triad (D5 → F#5 → A5) with sustain
 const playComplete = () => {
+  playTone(587, 0.6, 0.2, 0);
+  playTone(740, 0.6, 0.2, 0.18);
+  playTone(880, 0.9, 0.22, 0.36);
+};
+
+// Countdown tick: soft wooden knock
+const playTick = () => {
   try {
-    const ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    [0, 0.15, 0.3].forEach((d, i) => {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination); o.type = "sine";
-      o.frequency.setValueAtTime([660, 880, 1100][i], ctx.currentTime + d);
-      g.gain.setValueAtTime(0.25, ctx.currentTime + d);
-      g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + d + 0.5);
-      o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.5);
-    });
+    const ctx = getCtx();
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.type = "sine"; o.frequency.setValueAtTime(440, t);
+    o.frequency.exponentialRampToValueAtTime(220, t + 0.08);
+    g.gain.setValueAtTime(0.15, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t); o.stop(t + 0.12);
   } catch (e) {}
 };
 
@@ -233,10 +264,13 @@ function App() {
   const [data, setData] = useState(loadData);
   const [showNotes, setShowNotes] = useState(false);
   const [noteText, setNoteText] = useState("");
-  const [showWelcome, setShowWelcome] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(() => { try { return !localStorage.getItem("cbtr-welcomed"); } catch { return true; } });
   const [showSettings, setShowSettings] = useState(false);
-  const [sortBy, setSortBy] = useState("default");
-  const [sortReversed, setSortReversed] = useState(false);
+  const loadTabSort = (tab) => { try { const p = JSON.parse(localStorage.getItem("cbtr-sort")) || {}; return p[tab] || { by: "default", rev: false }; } catch { return { by: "default", rev: false }; } };
+  const saveTabSort = (tab, by, rev) => { try { const p = JSON.parse(localStorage.getItem("cbtr-sort")) || {}; p[tab] = { by, rev }; localStorage.setItem("cbtr-sort", JSON.stringify(p)); } catch {} };
+  const initSort = loadTabSort("Classic");
+  const [sortBy, setSortBy] = useState(initSort.by);
+  const [sortReversed, setSortReversed] = useState(initSort.rev);
   const [brewStep, setBrewStep] = useState(0);
   const [stepTime, setStepTime] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -256,10 +290,85 @@ function App() {
   const timerRef = useRef(null);
   const wakeRef = useRef(null);
 
+  // ─── Auth State ───────────────────────────────────────
+  const [token, setToken] = useState(() => { try { return localStorage.getItem("cbtr-token") || ""; } catch { return ""; } });
+  const [user, setUser] = useState(() => { try { return JSON.parse(localStorage.getItem("cbtr-user")) || null; } catch { return null; } });
+  const [authScreen, setAuthScreen] = useState(null); // null, "login", "register"
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const isLoggedIn = !!token && !!user;
+
+  // ─── API Helper ───────────────────────────────────────
+  const api = async (path, method = "GET", body = null, tokenOverride = null) => {
+    try {
+      const tk = tokenOverride || token;
+      const opts = { method, headers: { "Content-Type": "application/json" } };
+      if (tk) opts.headers["Authorization"] = `Bearer ${tk}`;
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch(`${API}${path}`, opts);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Request failed");
+      return json;
+    } catch (err) {
+      console.error(`API ${method} ${path}:`, err.message);
+      return null;
+    }
+  };
+
+  // ─── Sync from server on login / app load ─────────────
+  const syncFromServer = async (tk = null) => {
+    const useToken = tk || token;
+    if (!useToken) return;
+    setSyncing(true);
+    const result = await api("/sync", "GET", null, useToken);
+    if (result) {
+      setData((p) => ({ ...p, favorites: result.favorites, ratings: result.ratings, notes: result.notes, customRecipes: result.customRecipes, grinder: result.grinder }));
+    }
+    setSyncing(false);
+  };
+
+  // Auto-sync on app load if logged in
+  useEffect(() => { if (isLoggedIn) syncFromServer(); }, []);
+
+  // ─── Auth Actions ─────────────────────────────────────
+  const doRegister = async (email, password, displayName) => {
+    setAuthLoading(true); setAuthError("");
+    const result = await api("/register", "POST", { email, password, displayName });
+    setAuthLoading(false);
+    if (!result) { setAuthError("Connection failed. Check your internet."); return; }
+    if (result.error) { setAuthError(result.error); return; }
+    setToken(result.token); setUser(result.user);
+    localStorage.setItem("cbtr-token", result.token);
+    localStorage.setItem("cbtr-user", JSON.stringify(result.user));
+    setAuthScreen(null);
+    syncFromServer(result.token);
+  };
+
+  const doLogin = async (email, password) => {
+    setAuthLoading(true); setAuthError("");
+    const result = await api("/login", "POST", { email, password });
+    setAuthLoading(false);
+    if (!result) { setAuthError("Connection failed. Check your internet."); return; }
+    if (result.error) { setAuthError(result.error); return; }
+    setToken(result.token); setUser(result.user);
+    localStorage.setItem("cbtr-token", result.token);
+    localStorage.setItem("cbtr-user", JSON.stringify(result.user));
+    setAuthScreen(null);
+    syncFromServer(result.token);
+  };
+
+  const doLogout = () => {
+    setToken(""); setUser(null);
+    localStorage.removeItem("cbtr-token");
+    localStorage.removeItem("cbtr-user");
+  };
+
   useEffect(() => { saveData(data); }, [data]);
 
   const grinder = data.grinder || "none";
-  const setGrinder = (g) => setData((p) => ({ ...p, grinder: g }));
+  const setGrinder = (g) => { setData((p) => ({ ...p, grinder: g })); if (isLoggedIn) api("/grinder", "PUT", { grinder: g }); };
 
   const all = [...RECIPES, ...data.customRecipes.map((r) => ({ ...r, isCustom: true }))];
   const tabs = ["Classic", "Championship", "Favorites", "My Recipes", "Espresso-style"];
@@ -307,6 +416,7 @@ function App() {
   // Countdown timer
   useEffect(() => {
     if (countdown <= 0) return;
+    if (!silenced) playTick();
     const t = setTimeout(() => {
       if (countdown === 1) {
         setCountdown(0);
@@ -320,14 +430,14 @@ function App() {
 
   const startBrew = () => { unlockAudio(); setBrewStep(0); setStepTime(recipe.steps[0].duration); setElapsed(0); setIsBrewing(false); setBrewDone(false); setDoneRating(data.ratings[recipe.id] || 0); setDoneNote(data.notes[recipe.id] || ""); setScreen("brew"); setCountdown(3); wakeLock(); };
   const cancelBrew = () => { clearInterval(timerRef.current); setIsBrewing(false); setBrewDone(false); setCountdown(0); wakeRelease(); setScreen("detail"); };
-  const toggleFav = (id) => setData((p) => ({ ...p, favorites: p.favorites.includes(id) ? p.favorites.filter((f) => f !== id) : [...p.favorites, id] }));
-  const rate = (id, r) => setData((p) => ({ ...p, ratings: { ...p.ratings, [id]: r } }));
-  const saveNt = (id, n) => setData((p) => ({ ...p, notes: { ...p.notes, [id]: n } }));
+  const toggleFav = (id) => { setData((p) => ({ ...p, favorites: p.favorites.includes(id) ? p.favorites.filter((f) => f !== id) : [...p.favorites, id] })); if (isLoggedIn) api("/favorites", "PUT", { recipeId: id }); };
+  const rate = (id, r) => { setData((p) => ({ ...p, ratings: { ...p.ratings, [id]: r } })); if (isLoggedIn) api("/ratings", "PUT", { recipeId: id, rating: r }); };
+  const saveNt = (id, n) => { setData((p) => ({ ...p, notes: { ...p.notes, [id]: n } })); if (isLoggedIn) api("/notes", "PUT", { recipeId: id, noteText: n }); };
   const saveDone = () => { if (doneRating > 0) rate(recipe.id, doneRating); if (doneNote.trim()) saveNt(recipe.id, doneNote); setScreen("detail"); setBrewDone(false); };
   const exportD = () => { const b = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href = u; const d = new Date().toISOString().slice(0, 10); a.download = `aeropress-backup-${d}.json`; a.click(); URL.revokeObjectURL(u); };
-  const importD = (e) => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => { try { const d = JSON.parse(ev.target.result); if (d.favorites && d.ratings) setData(d); } catch {} }; r.readAsText(f); };
-  const saveCustom = () => { const r = { ...form, id: editId || `custom-${Date.now()}`, coffeeG: parseFloat(form.coffeeG) || 0, waterG: parseFloat(form.waterG) || 0, tempC: parseFloat(form.tempC) || 0, category: "My Recipes", credit: "My recipe", totalTime: form.steps.reduce((s, st) => s + (parseInt(st.duration) || 0), 0), steps: form.steps.map((s) => ({ ...s, duration: parseInt(s.duration) || 0, waterTo: s.waterTo ? parseFloat(s.waterTo) : undefined, waterAdd: s.waterAdd ? parseFloat(s.waterAdd) : undefined })) }; setData((p) => { const idx = p.customRecipes.findIndex((x) => x.id === r.id); const u = [...p.customRecipes]; if (idx >= 0) u[idx] = r; else u.push(r); return { ...p, customRecipes: u }; }); setBuilding(false); setEditId(null); setForm(emptyForm); };
-  const deleteCustom = (id) => { setData((p) => ({ ...p, customRecipes: p.customRecipes.filter((r) => r.id !== id), favorites: p.favorites.filter((f) => f !== id) })); setScreen("home"); };
+  const importD = (e) => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => { try { const d = JSON.parse(ev.target.result); if (d.favorites && d.ratings) { setData(d); if (isLoggedIn) { d.favorites.forEach((id) => api("/favorites", "PUT", { recipeId: id })); Object.entries(d.ratings).forEach(([id, r]) => api("/ratings", "PUT", { recipeId: id, rating: r })); Object.entries(d.notes).forEach(([id, n]) => { if (n) api("/notes", "PUT", { recipeId: id, noteText: n }); }); if (d.grinder) api("/grinder", "PUT", { grinder: d.grinder }); } } } catch {} }; r.readAsText(f); };
+  const saveCustom = () => { const r = { ...form, id: editId || `custom-${Date.now()}`, coffeeG: parseFloat(form.coffeeG) || 0, waterG: parseFloat(form.waterG) || 0, tempC: parseFloat(form.tempC) || 0, category: "My Recipes", credit: "My recipe", totalTime: form.steps.reduce((s, st) => s + (parseInt(st.duration) || 0), 0), steps: form.steps.map((s) => ({ ...s, duration: parseInt(s.duration) || 0, waterTo: s.waterTo ? parseFloat(s.waterTo) : undefined, waterAdd: s.waterAdd ? parseFloat(s.waterAdd) : undefined })) }; setData((p) => { const idx = p.customRecipes.findIndex((x) => x.id === r.id); const u = [...p.customRecipes]; if (idx >= 0) u[idx] = r; else u.push(r); return { ...p, customRecipes: u }; }); if (isLoggedIn) { const body = { recipeId: r.id, name: r.name, coffeeG: r.coffeeG, waterG: r.waterG, tempC: r.tempC, grind: r.grind, method: r.method, steps: r.steps }; if (editId) api("/recipes", "PUT", body); else api("/recipes", "POST", body); } setBuilding(false); setEditId(null); setForm(emptyForm); };
+  const deleteCustom = (id) => { setData((p) => ({ ...p, customRecipes: p.customRecipes.filter((r) => r.id !== id), favorites: p.favorites.filter((f) => f !== id) })); if (isLoggedIn) api(`/recipes/${id}`, "DELETE"); setScreen("home"); };
   const editCustom = (r) => { setEditId(r.id); setForm({ name: r.name, coffeeG: String(r.coffeeG), waterG: String(r.waterG), tempC: String(r.tempC), grind: r.grind, method: r.method, steps: r.steps.map((s) => ({ ...s, duration: String(s.duration), waterTo: s.waterTo ? String(s.waterTo) : "", waterAdd: s.waterAdd ? String(s.waterAdd) : "" })) }); setBuilding(true); };
   const addStep = () => { if (!sf.text || !sf.duration) return; setForm((p) => ({ ...p, steps: [...p.steps, { ...sf }] })); setSf(emptyStep); };
 
@@ -352,7 +462,7 @@ function App() {
         <p style={{ color: C.text, fontSize: 14, lineHeight: 1.7, margin: 0, fontWeight: 500 }}>Pick a recipe, follow the step-by-step guided timer, and brew a better cup. Use the ⚙ Grinder button to see grind settings for your specific grinder. Build your own recipes in the My Recipes tab. Sort, rate, and add personal tasting notes to any recipe.</p>
         <div style={{ width: 40, height: 2, background: C.terra, margin: "12px 0", borderRadius: 1 }} />
         <p style={{ color: C.subtle, fontSize: 13, lineHeight: 1.7, margin: 0 }}>Curated AeroPress recipes from World Championship winners, renowned baristas, and the coffee community. Designed collaboratively by Tochina and Claude AI.</p>
-        <button onClick={() => setShowWelcome(false)} style={{ background: "none", border: "none", color: C.accent, fontSize: 13, cursor: "pointer", padding: "8px 0 0", fontWeight: 600 }}>Dismiss</button>
+        <button onClick={() => { setShowWelcome(false); try { localStorage.setItem("cbtr-welcomed", "1"); } catch {} }} style={{ background: "none", border: "none", color: C.accent, fontSize: 13, cursor: "pointer", padding: "8px 0 0", fontWeight: 600 }}>Dismiss</button>
       </div>
     </div>
   );
@@ -377,6 +487,34 @@ function App() {
     </div>
   );
 
+  // ─── Auth Screen ─────────────────────────────────────
+  const AuthScreen = () => {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [displayName, setDisplayName] = useState("");
+    const isReg = authScreen === "register";
+    const submit = () => { if (isReg) doRegister(email, password, displayName); else doLogin(email, password); };
+    return (
+      <div style={{ padding: "0 16px 10px" }}>
+        <div style={{ background: C.card, borderRadius: 14, padding: "20px 16px", border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <h3 style={{ margin: 0, fontSize: 17, color: C.accent }}>{isReg ? "Create Account" : "Sign In"}</h3>
+            <button onClick={() => { setAuthScreen(null); setAuthError(""); }} style={{ background: "none", border: "none", color: C.subtle, cursor: "pointer", fontSize: 18 }}>✕</button>
+          </div>
+          {authError && <p style={{ color: C.cancel, fontSize: 13, margin: "0 0 10px", padding: "8px 12px", background: "#FFF0EF", borderRadius: 8 }}>{authError}</p>}
+          {isReg && <div style={{ marginBottom: 10 }}><label style={S.label}>Display Name</label><input style={S.input} placeholder="Tochina" value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></div>}
+          <div style={{ marginBottom: 10 }}><label style={S.label}>Email</label><input style={S.input} type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+          <div style={{ marginBottom: 14 }}><label style={S.label}>Password</label><input style={S.input} type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} /></div>
+          <button style={{ ...S.primaryBtn, marginTop: 0, opacity: authLoading ? 0.6 : 1 }} onClick={submit} disabled={authLoading || !email || !password}>{authLoading ? "..." : isReg ? "Create Account" : "Sign In"}</button>
+          <p style={{ textAlign: "center", fontSize: 13, color: C.subtle, marginTop: 12 }}>
+            {isReg ? "Already have an account? " : "Need an account? "}
+            <button onClick={() => { setAuthScreen(isReg ? "login" : "register"); setAuthError(""); }} style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, padding: 0 }}>{isReg ? "Sign in" : "Create one"}</button>
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   // ═══ HOME ════════════════════════════════════════════
   if (screen === "home") {
     return (
@@ -384,19 +522,26 @@ function App() {
         <div style={{ textAlign: "center", padding: "20px 16px 2px" }}>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: C.accent, letterSpacing: 0.3, margin: 0 }}>AeroPress Recipes & Timer</h1>
           <p style={{ fontSize: 12, color: C.terra, margin: "3px 0 0", letterSpacing: 1.5, fontStyle: "italic" }}>Bo's Third Brew</p>
-          <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 6 }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 6, flexWrap: "wrap" }}>
             <button onClick={() => setShowWelcome(true)} style={{ background: "none", border: "none", color: C.subtle, fontSize: 12, cursor: "pointer", opacity: 0.7 }}>About</button>
             <button onClick={() => setShowSettings(!showSettings)} style={{ background: "none", border: "none", color: C.subtle, fontSize: 12, cursor: "pointer", opacity: 0.7 }}>⚙ Grinder</button>
+            {isLoggedIn ? (
+              <button onClick={doLogout} style={{ background: "none", border: "none", color: C.subtle, fontSize: 12, cursor: "pointer", opacity: 0.7 }}>Sign out ({user.displayName || user.email})</button>
+            ) : (
+              <button onClick={() => setAuthScreen("login")} style={{ background: "none", border: "none", color: C.accent, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>Sign in</button>
+            )}
           </div>
+          {syncing && <p style={{ fontSize: 11, color: C.teal, margin: "4px 0 0" }}>Syncing...</p>}
         </div>
         <Landscape />
         {showWelcome && <Welcome />}
         {showSettings && <Settings />}
+        {authScreen && <AuthScreen />}
         <div style={{ display: "flex", overflowX: "auto", borderBottom: `1px solid ${C.border}`, scrollbarWidth: "none" }}>
           {tabs.map((t) => {
             const cnt = t === "Favorites" ? all.filter((r) => data.favorites.includes(r.id)).length : t === "My Recipes" ? data.customRecipes.length : all.filter((r) => r.category === t).length;
             return (
-            <button key={t} onClick={() => { setActiveTab(t); setBuilding(false); setSortBy("default"); setSortReversed(false); }}
+            <button key={t} onClick={() => { const s = loadTabSort(t); const validSort = (s.by === "year" || s.by === "place") && t !== "Championship" ? "default" : s.by; setSortBy(validSort); setSortReversed(validSort === "default" ? false : s.rev); setActiveTab(t); setBuilding(false); }}
               style={{ padding: "10px 13px", fontSize: 12, fontWeight: activeTab === t ? 700 : 400, color: activeTab === t ? C.accent : C.subtle, borderBottom: activeTab === t ? `2px solid ${C.accent}` : "2px solid transparent", background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
               {t === "Favorites" ? `★ ${t}` : t}{cnt > 0 ? ` (${cnt})` : ""}
             </button>
@@ -406,7 +551,7 @@ function App() {
         {!building && filtered.length > 1 && (
           <div style={{ padding: "8px 14px 0", display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 12, color: C.subtle }}>Sort:</span>
-            <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setSortReversed(false); }} style={{ ...S.select, width: "auto", padding: "5px 10px", fontSize: 12 }}>
+            <select value={sortBy} onChange={(e) => { const v = e.target.value; setSortBy(v); setSortReversed(false); saveTabSort(activeTab, v, false); }} style={{ ...S.select, width: "auto", padding: "5px 10px", fontSize: 12 }}>
               <option value="default">Default</option>
               <option value="alpha">A → Z</option>
               <option value="rating">Highest rated</option>
@@ -418,7 +563,7 @@ function App() {
               {activeTab === "Championship" && <option value="place">Place</option>}
             </select>
             {sortBy !== "default" && (
-              <button onClick={() => setSortReversed(!sortReversed)} title={sortReversed ? "Reversed" : "Normal order"} style={{ background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "4px 10px", fontSize: 14, cursor: "pointer", color: C.accent, fontWeight: 700, lineHeight: 1 }}>
+              <button onClick={() => { const nr = !sortReversed; setSortReversed(nr); saveTabSort(activeTab, sortBy, nr); }} title={sortReversed ? "Reversed" : "Normal order"} style={{ background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "4px 10px", fontSize: 14, cursor: "pointer", color: C.accent, fontWeight: 700, lineHeight: 1 }}>
                 {sortReversed ? "▲" : "▼"}
               </button>
             )}
